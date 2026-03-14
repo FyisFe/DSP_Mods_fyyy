@@ -1,6 +1,6 @@
 {
   "name": "BuildingPosViewer",
-  "version_number": "1.0.0",
+  "version_number": "1.0.1",
   "website_url": "https://github.com/FyisFe/DSP_Mods_fyyy/tree/master/BuildingPosViewer",
   "description": "Adds x/y/z copy buttons to building inspection windows/为建筑物检查窗口添加x/y/z复制按钮",
   "dependencies": [

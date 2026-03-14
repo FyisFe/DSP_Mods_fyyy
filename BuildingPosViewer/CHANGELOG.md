@@ -1,5 +1,10 @@
 # Changelog / 更新日志
 
+## 1.0.1
+
+- Add screenshots to README / 在README中添加截图
+- Use absolute image URLs for Thunderstore compatibility / 使用绝对图片链接以兼容Thunderstore
+
 ## 1.0.0
 
 - Initial release / 初始版本

@@ -6,7 +6,7 @@
     <AssemblyName>BuildingPosViewer</AssemblyName>
     <BepInExPluginGuid>org.fyyy.buildingposviewer</BepInExPluginGuid>
     <Description>DSP MOD - BuildingPosViewer</Description>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>https://nuget.bepinex.dev/v3/index.json</RestoreAdditionalProjectSources>
