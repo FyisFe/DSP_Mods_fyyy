@@ -6,8 +6,8 @@ Adds x/y/z copy buttons to building inspection windows. Click a button to copy t
 
 ## Screenshots / 截图
 
-![Smelter](Smelter.PNG)
-![Satellite Substation](Satellite.PNG)
+![Smelter](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/BuildingPosViewer/Smelter.PNG)
+![Satellite Substation](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/BuildingPosViewer/Satellite.PNG)
 
 ## Features / 功能
 
