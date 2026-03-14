@@ -4,6 +4,11 @@ Adds x/y/z copy buttons to building inspection windows. Click a button to copy t
 
 为建筑物检查窗口添加x/y/z复制按钮。点击按钮即可将对应坐标值复制到剪贴板。
 
+## Screenshots / 截图
+
+![Smelter](Smelter.PNG)
+![Satellite Substation](Satellite.PNG)
+
 ## Features / 功能
 
 - Copy buttons appear next to the building title in inspection windows / 复制按钮显示在检查窗口的建筑标题旁
