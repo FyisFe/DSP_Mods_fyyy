@@ -5,7 +5,7 @@
     <TargetFramework>net472</TargetFramework>
     <AssemblyName>FastTinderLaunch</AssemblyName>
     <BepInExPluginGuid>org.fyyy.fasttinderlaunch</BepInExPluginGuid>
-    <Description>DSP MOD - FastTinderLaunch</Description>
+    <Description>Restore old 100% dark fog tinder launch probability, toggleable via UXAssist / 恢复旧版100%黑雾火种发射概率，可在UXAssist设置面板中开关</Description>
     <Version>1.0.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
@@ -22,6 +22,13 @@
     <Reference Include="Assembly-CSharp">
       <HintPath>..\..\DSP_Mods\AssemblyFromGame\Assembly-CSharp.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>..\..\DSP_Mods\AssemblyFromGame\UnityEngine.UI.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\DSP_Mods\UXAssist\UXAssist.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">

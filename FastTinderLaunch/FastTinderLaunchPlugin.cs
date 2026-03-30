@@ -1,28 +1,57 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection.Emit;
 using BepInEx;
+using BepInEx.Configuration;
 using HarmonyLib;
+using UnityEngine;
+using UXAssist.Common;
+using UXAssist.UI;
 
 namespace FastTinderLaunch;
 
 [BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
+[BepInDependency(UXAssist.PluginInfo.PLUGIN_GUID)]
 public class FastTinderLaunchPlugin : BaseUnityPlugin
 {
     public new static readonly BepInEx.Logging.ManualLogSource Logger =
         BepInEx.Logging.Logger.CreateLogSource(PluginInfo.PLUGIN_NAME);
 
+    public static ConfigEntry<bool> ModEnabled;
+
     private Harmony _harmony;
 
     private void Awake()
     {
-        _harmony = Harmony.CreateAndPatchAll(typeof(TinderPatches));
+        ModEnabled = Config.Bind("General", "Enabled", true, "Restore old 100% tinder launch probability / 恢复旧版100%火种发射概率");
+        ModEnabled.SettingChanged += OnEnabledChanged;
+
+        _harmony = new Harmony(PluginInfo.PLUGIN_GUID);
+        ApplyPatches();
+
+        UIConfig.Init();
         Logger.LogInfo("FastTinderLaunch loaded.");
     }
 
     private void OnDestroy()
     {
+        ModEnabled.SettingChanged -= OnEnabledChanged;
         _harmony?.UnpatchSelf();
+    }
+
+    private void ApplyPatches()
+    {
+        if (!ModEnabled.Value) return;
+        _harmony.PatchAll(typeof(TinderPatches));
+    }
+
+    private void OnEnabledChanged(object sender, EventArgs e)
+    {
+        _harmony.UnpatchSelf();
+        ApplyPatches();
+        var patched = _harmony.GetPatchedMethods();
+        Logger.LogInfo($"FastTinderLaunch {(ModEnabled.Value ? "enabled" : "disabled")}, {patched.Count()} patched methods.");
     }
 
     static class TinderPatches
@@ -178,5 +207,25 @@ public class FastTinderLaunchPlugin : BaseUnityPlugin
 
         static bool IsDouble(CodeInstruction code, double value) =>
             code.opcode == OpCodes.Ldc_R8 && code.operand is double d && Math.Abs(d - value) < 1e-10;
+    }
+
+    static class UIConfig
+    {
+        public static void Init()
+        {
+            I18N.Add("FastTinderLaunch", "FastTinderLaunch", "黑雾火种快速发射");
+            I18N.Add("Restore old 100% tinder launch behavior", "Restore old 100% tinder launch behavior", "将黑雾火种的发射概率恢复为旧版100%（充满即发）");
+            I18N.Apply();
+
+            MyConfigWindow.OnUICreated += CreateUI;
+        }
+
+        private static void CreateUI(MyConfigWindow wnd, RectTransform trans)
+        {
+            wnd.AddSplitter(trans, 10f);
+            wnd.AddTabGroup(trans, "FastTinderLaunch", "tab-group-fasttinderlaunch");
+            var tab = wnd.AddTab(trans, "FastTinderLaunch");
+            wnd.AddCheckBox(0f, 10f, tab, ModEnabled, "Restore old 100% tinder launch behavior");
+        }
     }
 }
