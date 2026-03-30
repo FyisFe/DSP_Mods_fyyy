@@ -1,0 +1,9 @@
+{
+  "name": "FastTinderLaunch",
+  "version_number": "1.0.0",
+  "website_url": "",
+  "description": "将黑雾火种的发射概率恢复为旧版100%（充满即发），移除新版的1800tick间隔和概率衰减门槛",
+  "dependencies": [
+    "xiaoye97-BepInEx-5.4.17"
+  ]
+}
