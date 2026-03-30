@@ -59,7 +59,10 @@ public class FastTinderLaunchPlugin : BaseUnityPlugin
                 }
             }
 
-            Logger.LogInfo($"PrepareDispatchLogic: {patchCount} patches (expected 3).");
+            if (patchCount != 3)
+                Logger.LogWarning($"PrepareDispatchLogic: {patchCount} patches (expected 3)!");
+            else
+                Logger.LogInfo($"PrepareDispatchLogic: {patchCount} patches (expected 3).");
             return codes;
         }
 
@@ -110,7 +113,10 @@ public class FastTinderLaunchPlugin : BaseUnityPlugin
                 }
             }
 
-            Logger.LogInfo($"LogicTick: {patchCount} patches (expected 3).");
+            if (patchCount != 3)
+                Logger.LogWarning($"LogicTick: {patchCount} patches (expected 3), 0.75 count: {count075}!");
+            else
+                Logger.LogInfo($"LogicTick: {patchCount} patches (expected 3).");
             return codes;
         }
 
@@ -124,12 +130,14 @@ public class FastTinderLaunchPlugin : BaseUnityPlugin
         {
             var codes = new List<CodeInstruction>(instructions);
             int patchCount = 0;
+            int count075 = 0;
 
             for (int i = 0; i < codes.Count; i++)
             {
                 // 0.75 → 1E+300 (only one occurrence in this method)
                 if (IsDouble(codes[i], 0.75))
                 {
+                    count075++;
                     codes[i].operand = 1E+300;
                     patchCount++;
                 }
@@ -147,7 +155,10 @@ public class FastTinderLaunchPlugin : BaseUnityPlugin
                 }
             }
 
-            Logger.LogInfo($"LogicTickVirtual: {patchCount} patches (expected 3).");
+            if (patchCount != 3)
+                Logger.LogWarning($"LogicTickVirtual: {patchCount} patches (expected 3), 0.75 count: {count075}!");
+            else
+                Logger.LogInfo($"LogicTickVirtual: {patchCount} patches (expected 3).");
             return codes;
         }
 
