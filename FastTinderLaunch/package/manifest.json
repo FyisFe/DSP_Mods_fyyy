@@ -5,6 +5,6 @@
   "description": "Restore old 100% dark fog tinder launch probability. Removes 1800-tick interval, probability decay, and global coverage dampening. Toggleable via UXAssist config panel. / 恢复旧版100%黑雾火种发射概率，可在UXAssist设置面板中开关",
   "dependencies": [
     "xiaoye97-BepInEx-5.4.17",
-    "soardev-UXAssist-1.0.0"
+    "soarqin-UXAssist-1.4.0"
   ]
 }
