@@ -5,3 +5,6 @@ obj/
 .vs/
 *.DotSettings.user
 package/*.zip
+GameCode-latest
+XianTuEnhanced/
+docs/
