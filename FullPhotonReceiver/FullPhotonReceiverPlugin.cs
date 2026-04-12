@@ -40,16 +40,18 @@ public class FullPhotonReceiverPlugin : BaseUnityPlugin
 
             __instance.currentStrength = 1.0f;
 
+            // Vanilla formula with currentStrength replaced by 1.0:
+            //   capacity = currentStrength * (1+warmup*1.5) * lensBonus * modeMultiplier * base
             float accBonus = (float)Cargo.accTableMilli[__instance.catalystIncLevel];
             __instance.capacityCurrentTick = (long)(
-                1.0
-                * (1.0 + (double)__instance.warmup * 1.5)
+                (1.0 + (double)__instance.warmup * 1.5)
                 * (__instance.catalystPoint > 0 ? 2.0 * (1.0 + (double)accBonus) : 1.0)
                 * 8.0
                 * (double)__instance.genEnergyPerTick);
 
-            // Constant positive warmupSpeed — warmup will steadily rise to 1.0
-            __instance.warmupSpeed = (float)((1.0 - 0.75) * 4.0 * 1.3888889043300878e-05);
+            // Vanilla: warmupSpeed = (currentStrength - 0.75) * 4 / 72000
+            // With currentStrength = 1.0 this is a constant positive value
+            __instance.warmupSpeed = (float)((1.0 - 0.75) * 4.0 / 72000.0);
 
             // Request zero energy from the Dyson Sphere
             __result = 0L;
