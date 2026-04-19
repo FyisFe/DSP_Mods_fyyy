@@ -14,6 +14,7 @@ internal class SearchBarUI : MonoBehaviour
     private const float BarMarginSides = 10f;
     private const float ClearButtonWidth = 24f;
     private const float ContentShift = BarHeight + 4f; // 28f, applied to contentTrans top
+    private const float DebounceSeconds = 0.120f;
 
     internal UIBlueprintBrowser browser;
     internal InputField inputField;
@@ -159,6 +160,11 @@ internal class SearchBarUI : MonoBehaviour
 
     private void Update()
     {
-        // Debounce driver implemented in Task 6. Left empty here so Task 4 builds cleanly.
+        if (!SearchState.pendingRefresh) return;
+        if (Time.unscaledTime - SearchState.lastChangeTime < DebounceSeconds) return;
+        SearchState.pendingRefresh = false;
+        SearchState.tokens = SearchFilter.Tokenize(SearchState.query);
+        if (browser != null && browser.currentDirectoryInfo != null)
+            browser.SetCurrentDirectory(browser.currentDirectoryInfo.FullName);
     }
 }
