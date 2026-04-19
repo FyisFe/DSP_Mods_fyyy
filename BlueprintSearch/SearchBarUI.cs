@@ -4,39 +4,47 @@ using UnityEngine.UI;
 namespace BlueprintSearch;
 
 /// <summary>
-/// Builds and owns the search input + clear button. Parented to UIBlueprintBrowser.rectTrans.
-/// A single instance is created in the UIBlueprintBrowser._OnCreate postfix.
+/// Builds and owns the search input + clear button. A single instance is created in the
+/// UIBlueprintBrowser._OnCreate postfix. The bar is parented alongside the browser's
+/// ScrollRect so it sits in the same left-column extent as the file grid.
 /// </summary>
 internal class SearchBarUI : MonoBehaviour
 {
     private const float BarHeight = 24f;
-    private const float BarMarginTop = 40f;   // below the toolbar row
-    private const float BarMarginSides = 10f;
     private const float ClearButtonWidth = 24f;
-    private const float ContentShift = BarHeight + 4f; // 28f, applied to contentTrans top
+    private const float BarBottomGap = 4f; // gap between bar bottom and scroll-rect top
+
     internal UIBlueprintBrowser browser;
     internal InputField inputField;
     internal Button clearButton;
 
-    /// <summary>
-    /// Construct UI. Call once right after the browser's own _OnCreate has run.
-    /// </summary>
     internal static SearchBarUI Create(UIBlueprintBrowser browser)
     {
+        var scrollRt = (RectTransform)browser.browserScroll.transform;
+
         var go = new GameObject("BlueprintSearchBar", typeof(RectTransform));
         var rt = (RectTransform)go.transform;
-        rt.SetParent(browser.rectTrans, false);
-        rt.anchorMin = new Vector2(0f, 1f);
-        rt.anchorMax = new Vector2(1f, 1f);
+        rt.SetParent(scrollRt.parent, false);
+
+        // Snapshot the scroll rect's top edge BEFORE we shrink it.
+        float oldScrollTopInset = scrollRt.offsetMax.y;
+
+        // Mirror the scroll rect's horizontal extent; anchor top only.
+        rt.anchorMin = new Vector2(scrollRt.anchorMin.x, 1f);
+        rt.anchorMax = new Vector2(scrollRt.anchorMax.x, 1f);
         rt.pivot = new Vector2(0.5f, 1f);
-        rt.anchoredPosition = new Vector2(0f, -BarMarginTop);
-        rt.sizeDelta = new Vector2(-(BarMarginSides * 2f), BarHeight);
+        rt.offsetMin = new Vector2(scrollRt.offsetMin.x, oldScrollTopInset - BarHeight);
+        rt.offsetMax = new Vector2(scrollRt.offsetMax.x, oldScrollTopInset);
+
+        // Shrink the scroll rect from the top so the file grid starts below the bar.
+        scrollRt.offsetMax = new Vector2(
+            scrollRt.offsetMax.x,
+            oldScrollTopInset - BarHeight - BarBottomGap);
 
         var ui = go.AddComponent<SearchBarUI>();
         ui.browser = browser;
         ui.BuildInputField(rt);
         ui.BuildClearButton(rt);
-        ui.ShiftContentTrans();
         ui.RefreshPlaceholder();
         return ui;
     }
@@ -55,7 +63,6 @@ internal class SearchBarUI : MonoBehaviour
         var bg = inputGo.GetComponent<Image>();
         bg.color = new Color(0f, 0f, 0f, 0.35f);
 
-        // Text child
         var textGo = new GameObject("Text", typeof(RectTransform), typeof(Text));
         var textRt = (RectTransform)textGo.transform;
         textRt.SetParent(inputRt, false);
@@ -70,7 +77,6 @@ internal class SearchBarUI : MonoBehaviour
         text.fontSize = 14;
         text.alignment = TextAnchor.MiddleLeft;
 
-        // Placeholder child
         var phGo = new GameObject("Placeholder", typeof(RectTransform), typeof(Text));
         var phRt = (RectTransform)phGo.transform;
         phRt.SetParent(inputRt, false);
@@ -121,16 +127,6 @@ internal class SearchBarUI : MonoBehaviour
 
         clearButton = btnGo.GetComponent<Button>();
         clearButton.onClick.AddListener(OnClearClicked);
-    }
-
-    private void ShiftContentTrans()
-    {
-        // Shift the file grid down by ContentShift so it doesn't overlap the search row.
-        var ct = browser.contentTrans;
-        // contentTrans is already parented and anchored by vanilla. We move its top edge down.
-        Vector2 offsetMax = ct.offsetMax;
-        offsetMax.y -= ContentShift;
-        ct.offsetMax = offsetMax;
     }
 
     internal void RefreshPlaceholder()

@@ -69,7 +69,7 @@ internal static class UIBlueprintBrowserPatches
         int matches = 0;
         int y = 0;
         var entries = SearchState.cachedEntries;
-        int maxResults = BlueprintSearchPlugin.MaxResults?.Value ?? 256;
+        int maxResults = BlueprintSearchPlugin.MaxResults?.Value ?? 48;
         for (int i = 0; i < entries.Count && matches < maxResults; i++)
         {
             if (!SearchFilter.Matches(entries[i].relLower, SearchState.tokens)) continue;
