@@ -22,6 +22,9 @@
     <Reference Include="Assembly-CSharp">
       <HintPath>..\..\DSP_Mods\AssemblyFromGame\Assembly-CSharp.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>..\..\DSP_Mods\AssemblyFromGame\UnityEngine.UI.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
