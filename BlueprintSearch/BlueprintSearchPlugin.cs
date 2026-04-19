@@ -1,4 +1,5 @@
 using BepInEx;
+using BlueprintSearch.Patches;
 using HarmonyLib;
 
 namespace BlueprintSearch;
@@ -14,7 +15,7 @@ public class BlueprintSearchPlugin : BaseUnityPlugin
     private void Awake()
     {
         _harmony = new Harmony(PluginInfo.PLUGIN_GUID);
-        // Patches applied in later tasks.
+        _harmony.PatchAll(typeof(UIBlueprintBrowserPatches));
         Logger.LogInfo("BlueprintSearch loaded.");
     }
 
