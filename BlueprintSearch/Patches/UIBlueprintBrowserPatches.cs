@@ -67,6 +67,7 @@ internal static class UIBlueprintBrowserPatches
             string shortName = ComposeLabel(relOrig);
 
             var item = GetOrCreateFileItemViaReflection(browser);
+            if (item == null) break;
             item._Init(browser.data);
             y = item.SetItemLayout(matches, false, fullPath, shortName);
             item._Open();
@@ -82,8 +83,20 @@ internal static class UIBlueprintBrowserPatches
     private static readonly System.Reflection.MethodInfo GetOrCreateFileItemMI =
         AccessTools.Method(typeof(UIBlueprintBrowser), "GetOrCreateFileItem");
 
+    private static bool _missingMIReported;
+
     private static UIBlueprintFileItem GetOrCreateFileItemViaReflection(UIBlueprintBrowser browser)
     {
+        if (GetOrCreateFileItemMI == null)
+        {
+            if (!_missingMIReported)
+            {
+                _missingMIReported = true;
+                BlueprintSearchPlugin.Logger.LogError(
+                    "BlueprintSearch: UIBlueprintBrowser.GetOrCreateFileItem not found — search results disabled.");
+            }
+            return null;
+        }
         return (UIBlueprintFileItem)GetOrCreateFileItemMI.Invoke(browser, null);
     }
 

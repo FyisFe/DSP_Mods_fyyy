@@ -153,7 +153,8 @@ internal class SearchBarUI : MonoBehaviour
     {
         inputField.SetTextWithoutNotify("");
         SearchState.ClearQuery();
-        // Task 6 will trigger the browser refresh here. For now, just reset state.
+        // ClearQuery sets Active=false, so the SetCurrentDirectory postfix is a no-op here
+        // and vanilla restores the normal folder view.
         if (browser != null && browser.currentDirectoryInfo != null)
             browser.SetCurrentDirectory(browser.currentDirectoryInfo.FullName);
     }
