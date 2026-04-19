@@ -16,6 +16,7 @@ public class BlueprintSearchPlugin : BaseUnityPlugin
     {
         _harmony = new Harmony(PluginInfo.PLUGIN_GUID);
         _harmony.PatchAll(typeof(UIBlueprintBrowserPatches));
+        _harmony.PatchAll(typeof(UIBlueprintFileItemPatches));
         Logger.LogInfo("BlueprintSearch loaded.");
     }
 
