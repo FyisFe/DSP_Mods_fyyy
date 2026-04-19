@@ -14,11 +14,19 @@ internal static class UIBlueprintBrowserPatches
         searchBarUI = SearchBarUI.Create(__instance);
     }
 
+    private static void UpdateToolbarInteractable(UIBlueprintBrowser browser)
+    {
+        bool interactable = !SearchState.Active;
+        browser.cutButton.interactable = interactable;
+        browser.newFileButton.interactable = interactable;
+        browser.newFolderButton.interactable = interactable;
+        browser.upLevelButton.interactable = interactable;
+    }
+
     [HarmonyPostfix]
     [HarmonyPatch(typeof(UIBlueprintBrowser), "_OnOpen")]
     static void OnOpen_Postfix(UIBlueprintBrowser __instance)
     {
-        // Clear any stale query and restore the UI to empty without firing onValueChanged.
         if (searchBarUI != null && searchBarUI.inputField != null)
             searchBarUI.inputField.SetTextWithoutNotify("");
         SearchState.ClearQuery();
@@ -28,19 +36,23 @@ internal static class UIBlueprintBrowserPatches
             int rootLen = __instance.rootPath != null ? __instance.rootPath.Length : 0;
             SearchState.RebuildCache(__instance.rootPath, rootLen, BlueprintSearchPlugin.Logger);
         }
+        UpdateToolbarInteractable(__instance);
     }
 
     [HarmonyPostfix]
     [HarmonyPatch(typeof(UIBlueprintBrowser), "_OnClose")]
-    static void OnClose_Postfix()
+    static void OnClose_Postfix(UIBlueprintBrowser __instance)
     {
         SearchState.ClearQuery();
+        // Restore interactable state in case the browser reopens with a different mod state.
+        if (__instance != null) UpdateToolbarInteractable(__instance);
     }
 
     [HarmonyPostfix]
     [HarmonyPatch(typeof(UIBlueprintBrowser), nameof(UIBlueprintBrowser.SetCurrentDirectory))]
     static void SetCurrentDirectory_Postfix(UIBlueprintBrowser __instance)
     {
+        UpdateToolbarInteractable(__instance);
         if (!SearchState.Active) return;
         RepopulateWithResults(__instance);
     }
@@ -119,5 +131,40 @@ internal static class UIBlueprintBrowserPatches
             ? withoutExt.Substring(0, lastSlash)
             : withoutExt.Substring(prevSlash + 1, lastSlash - prevSlash - 1);
         return parent + " / " + fileName;
+    }
+
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(UIBlueprintBrowser), "OnNewFileButtonClick")]
+    static void OnNewFileButtonClick_Postfix()
+    {
+        SearchState.cacheDirty = true;
+    }
+
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(UIBlueprintBrowser), "OnNewFolderButtonClick")]
+    static void OnNewFolderButtonClick_Postfix()
+    {
+        SearchState.cacheDirty = true;
+    }
+
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(UIBlueprintInspector), "OnDeleteClick")]
+    static void InspectorOnDeleteClick_Postfix()
+    {
+        SearchState.cacheDirty = true;
+    }
+
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(UIBlueprintInspector), "OnSaveChangesClick")]
+    static void InspectorOnSaveChangesClick_Postfix()
+    {
+        SearchState.cacheDirty = true;
+    }
+
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(UIBlueprintBookInspector), "DoDeleteBook")]
+    static void BookInspectorDoDeleteBook_Postfix()
+    {
+        SearchState.cacheDirty = true;
     }
 }
