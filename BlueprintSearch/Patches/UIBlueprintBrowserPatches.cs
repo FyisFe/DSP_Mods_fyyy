@@ -29,6 +29,7 @@ internal static class UIBlueprintBrowserPatches
     {
         if (searchBarUI != null && searchBarUI.inputField != null)
             searchBarUI.inputField.SetTextWithoutNotify("");
+        if (searchBarUI != null) searchBarUI.RefreshPlaceholder();
         SearchState.ClearQuery();
 
         if (SearchState.cacheDirty)
@@ -57,8 +58,6 @@ internal static class UIBlueprintBrowserPatches
         RepopulateWithResults(__instance);
     }
 
-    private const int MaxResults = 256;
-
     private static void RepopulateWithResults(UIBlueprintBrowser browser)
     {
         // Clear the file items that vanilla just populated for the current folder.
@@ -70,7 +69,8 @@ internal static class UIBlueprintBrowserPatches
         int matches = 0;
         int y = 0;
         var entries = SearchState.cachedEntries;
-        for (int i = 0; i < entries.Count && matches < MaxResults; i++)
+        int maxResults = BlueprintSearchPlugin.MaxResults?.Value ?? 256;
+        for (int i = 0; i < entries.Count && matches < maxResults; i++)
         {
             if (!SearchFilter.Matches(entries[i].relLower, SearchState.tokens)) continue;
 
@@ -124,7 +124,7 @@ internal static class UIBlueprintBrowserPatches
             ? relPath.Substring(0, relPath.Length - 4)
             : relPath;
         int lastSlash = withoutExt.LastIndexOf('/');
-        if (lastSlash < 0) return withoutExt;
+        if (lastSlash <= 0) return withoutExt.Substring(lastSlash + 1);
         string fileName = withoutExt.Substring(lastSlash + 1);
         int prevSlash = withoutExt.LastIndexOf('/', lastSlash - 1);
         string parent = prevSlash < 0
