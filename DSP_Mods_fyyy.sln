@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FastTinderLaunch", "FastTin
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FullPhotonReceiver", "FullPhotonReceiver\FullPhotonReceiver.csproj", "{CA041C37-52C5-4E65-995C-632B0D0A46C2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlueprintSearch", "BlueprintSearch\BlueprintSearch.csproj", "{44490AD3-44A7-493E-83AB-A54E751DA846}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -97,6 +99,18 @@ Global
 		{CA041C37-52C5-4E65-995C-632B0D0A46C2}.Release|x64.Build.0 = Release|Any CPU
 		{CA041C37-52C5-4E65-995C-632B0D0A46C2}.Release|x86.ActiveCfg = Release|Any CPU
 		{CA041C37-52C5-4E65-995C-632B0D0A46C2}.Release|x86.Build.0 = Release|Any CPU
+		{44490AD3-44A7-493E-83AB-A54E751DA846}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{44490AD3-44A7-493E-83AB-A54E751DA846}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{44490AD3-44A7-493E-83AB-A54E751DA846}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{44490AD3-44A7-493E-83AB-A54E751DA846}.Debug|x64.Build.0 = Debug|Any CPU
+		{44490AD3-44A7-493E-83AB-A54E751DA846}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{44490AD3-44A7-493E-83AB-A54E751DA846}.Debug|x86.Build.0 = Debug|Any CPU
+		{44490AD3-44A7-493E-83AB-A54E751DA846}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{44490AD3-44A7-493E-83AB-A54E751DA846}.Release|Any CPU.Build.0 = Release|Any CPU
+		{44490AD3-44A7-493E-83AB-A54E751DA846}.Release|x64.ActiveCfg = Release|Any CPU
+		{44490AD3-44A7-493E-83AB-A54E751DA846}.Release|x64.Build.0 = Release|Any CPU
+		{44490AD3-44A7-493E-83AB-A54E751DA846}.Release|x86.ActiveCfg = Release|Any CPU
+		{44490AD3-44A7-493E-83AB-A54E751DA846}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

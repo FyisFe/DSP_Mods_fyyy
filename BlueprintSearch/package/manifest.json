@@ -1,0 +1,7 @@
+{
+  "name": "BlueprintSearch",
+  "version_number": "1.0.0",
+  "website_url": "",
+  "description": "Search bar for the blueprint browser / 蓝图库搜索栏",
+  "dependencies": ["BepInEx-BepInExPack-5.4.21"]
+}
