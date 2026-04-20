@@ -1,5 +1,6 @@
 using System.IO;
 using HarmonyLib;
+using UnityEngine;
 using UnityEngine.EventSystems;
 
 namespace BlueprintSearch.Patches;
@@ -10,38 +11,37 @@ internal static class UIBlueprintFileItemPatches
     [HarmonyPatch(typeof(UIBlueprintFileItem), "_OnRegEvent")]
     static void OnRegEvent_Postfix(UIBlueprintFileItem __instance)
     {
-        // Add an EventTrigger that forwards right-clicks to our handler.
-        // We attach to the same button's GameObject used by left-click.
+        // Do NOT use UnityEngine.EventSystems.EventTrigger: it implements IScrollHandler and
+        // the drag handlers unconditionally, so Unity's ExecuteHierarchy stops at the tile
+        // button and the parent ScrollRect never receives mousewheel / drag-scroll events.
+        // A click-only component preserves right-click without blocking scroll propagation.
         var go = __instance.button.gameObject;
-        var trigger = go.GetComponent<EventTrigger>();
-        if (trigger == null) trigger = go.AddComponent<EventTrigger>();
+        var handler = go.GetComponent<BlueprintItemRightClickHandler>();
+        if (handler == null) handler = go.AddComponent<BlueprintItemRightClickHandler>();
+        handler.item = __instance;
+    }
+}
 
-        // Guard against attaching twice if _OnRegEvent runs multiple times per item.
-        foreach (var e in trigger.triggers)
-        {
-            if (e.eventID == EventTriggerType.PointerClick) return;
-        }
+internal class BlueprintItemRightClickHandler : MonoBehaviour, IPointerClickHandler
+{
+    internal UIBlueprintFileItem item;
 
-        var entry = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
-        entry.callback.AddListener((data) =>
-        {
-            var ped = (PointerEventData)data;
-            if (ped.button != PointerEventData.InputButton.Right) return;
-            if (!SearchState.Active) return;
-            if (__instance.isDirectory) return; // Search results are files only; nothing to do.
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (eventData.button != PointerEventData.InputButton.Right) return;
+        if (!SearchState.Active) return;
+        if (item == null || item.isDirectory) return;
 
-            string containing = Path.GetDirectoryName(__instance.fullPath);
-            if (string.IsNullOrEmpty(containing)) return;
+        string containing = Path.GetDirectoryName(item.fullPath);
+        if (string.IsNullOrEmpty(containing)) return;
 
-            var browser = UIBlueprintBrowserPatches.searchBarUI != null
-                ? UIBlueprintBrowserPatches.searchBarUI.browser
-                : null;
-            if (browser == null) return;
+        var browser = UIBlueprintBrowserPatches.searchBarUI != null
+            ? UIBlueprintBrowserPatches.searchBarUI.browser
+            : null;
+        if (browser == null) return;
 
-            UIBlueprintBrowserPatches.searchBarUI.inputField.SetTextWithoutNotify("");
-            SearchState.ClearQuery();
-            browser.SetCurrentDirectory(containing);
-        });
-        trigger.triggers.Add(entry);
+        UIBlueprintBrowserPatches.searchBarUI.inputField.SetTextWithoutNotify("");
+        SearchState.ClearQuery();
+        browser.SetCurrentDirectory(containing);
     }
 }
