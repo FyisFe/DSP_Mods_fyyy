@@ -1,0 +1,9 @@
+{
+  "name": "FullPhotonReceiver",
+  "version_number": "1.0.0",
+  "website_url": "https://github.com/FyisFe/DSP_Mods_fyyy",
+  "description": "Photon-mode ray receivers always produce at full power, ignoring sun direction and Dyson Sphere power. / 光子模式射线接收站始终满功率生产临界光子，无视太阳朝向和戴森球功率",
+  "dependencies": [
+    "xiaoye97-BepInEx-5.4.17"
+  ]
+}
