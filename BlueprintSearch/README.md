@@ -4,6 +4,8 @@ Adds a search bar to the blueprint browser window.
 
 为蓝图库窗口添加搜索栏。
 
+![demo](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/3a7147f7f2c7f8d5e1463fc50c53469d8c625255/BlueprintSearch/demo.png)
+
 ## Features / 功能
 
 - Search recursively across all folders / 跨所有文件夹递归搜索
