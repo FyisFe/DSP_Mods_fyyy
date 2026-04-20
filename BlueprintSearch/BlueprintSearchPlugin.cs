@@ -24,8 +24,8 @@ public class BlueprintSearchPlugin : BaseUnityPlugin
             "Enable search bar in blueprint browser / 在蓝图库窗口启用搜索栏");
         ModEnabled.SettingChanged += OnEnabledChanged;
 
-        MaxResults = Config.Bind("General", "MaxResults", 48,
-            "Maximum number of search results shown (UI responsiveness guard). Lower = snappier typing, higher = more results.");
+        MaxResults = Config.Bind("General", "MaxResults", 0,
+            "Hard cap on total search results. 0 = unlimited. Results are rendered progressively across frames, so the cap is only needed for libraries so large that even streamed rendering is undesirable.");
 
         DebounceMs = Config.Bind("General", "DebounceMs", 120,
             "Milliseconds to wait after the last keystroke before recomputing results");

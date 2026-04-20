@@ -44,6 +44,7 @@ internal static class UIBlueprintBrowserPatches
     [HarmonyPatch(typeof(UIBlueprintBrowser), "_OnClose")]
     static void OnClose_Postfix(UIBlueprintBrowser __instance)
     {
+        CancelStreaming();
         SearchState.ClearQuery();
         // Restore interactable state in case the browser reopens with a different mod state.
         if (__instance != null) UpdateToolbarInteractable(__instance);
@@ -58,6 +59,24 @@ internal static class UIBlueprintBrowserPatches
         RepopulateWithResults(__instance);
     }
 
+    // Progressive rendering budget. Each opened file item is expensive (blueprint preview load),
+    // so we cap work per frame and stream the rest via SearchBarUI.Update -> ContinueStreaming.
+    private const int MatchesPerFrame = 16;
+    private const int ScanPerFrame = 5000;
+
+    private static UIBlueprintBrowser _streamBrowser;
+    private static int _streamNextIndex;
+    private static int _streamMatches;
+    private static int _streamY;
+
+    internal static void CancelStreaming()
+    {
+        _streamBrowser = null;
+        _streamNextIndex = 0;
+        _streamMatches = 0;
+        _streamY = 0;
+    }
+
     private static void RepopulateWithResults(UIBlueprintBrowser browser)
     {
         // Clear the file items that vanilla just populated for the current folder.
@@ -66,12 +85,40 @@ internal static class UIBlueprintBrowserPatches
             if (fi.inited) fi._Free();
         }
 
-        int matches = 0;
-        int y = 0;
+        _streamBrowser = browser;
+        _streamNextIndex = 0;
+        _streamMatches = 0;
+        _streamY = 0;
+
+        RunStreamBatch();
+    }
+
+    internal static void ContinueStreaming()
+    {
+        if (_streamBrowser == null) return;
+        if (!SearchState.Active) { CancelStreaming(); return; }
+        // Another keystroke is already pending — don't burn cycles on items the imminent
+        // SetCurrentDirectory will throw away.
+        if (SearchState.pendingRefresh) return;
+        RunStreamBatch();
+    }
+
+    private static void RunStreamBatch()
+    {
+        var browser = _streamBrowser;
         var entries = SearchState.cachedEntries;
-        int maxResults = BlueprintSearchPlugin.MaxResults?.Value ?? 48;
-        for (int i = 0; i < entries.Count && matches < maxResults; i++)
+        int maxResults = BlueprintSearchPlugin.MaxResults?.Value ?? 0;
+        int matchesAdded = 0;
+        int scanned = 0;
+        bool hardCapHit = false;
+
+        while (matchesAdded < MatchesPerFrame
+               && scanned < ScanPerFrame
+               && _streamNextIndex < entries.Count)
         {
+            if (maxResults > 0 && _streamMatches >= maxResults) { hardCapHit = true; break; }
+            int i = _streamNextIndex++;
+            scanned++;
             if (!SearchFilter.Matches(entries[i].relLower, SearchState.tokens)) continue;
 
             string relOrig = entries[i].relOriginal;
@@ -79,16 +126,34 @@ internal static class UIBlueprintBrowserPatches
             string shortName = ComposeLabel(relOrig);
 
             var item = GetOrCreateFileItemViaReflection(browser);
-            if (item == null) break;
+            if (item == null) { _streamNextIndex = entries.Count; break; }
             item._Init(browser.data);
-            y = item.SetItemLayout(matches, false, fullPath, shortName);
+            _streamY = item.SetItemLayout(_streamMatches, false, fullPath, shortName);
             item._Open();
-            matches++;
+            _streamMatches++;
+            matchesAdded++;
         }
 
-        browser.emptyTipText.gameObject.SetActive(matches == 0);
-        browser.contentTrans.sizeDelta = new UnityEngine.Vector2(
-            browser.contentTrans.sizeDelta.x, (float)y);
+        if (matchesAdded > 0)
+        {
+            browser.contentTrans.sizeDelta = new UnityEngine.Vector2(
+                browser.contentTrans.sizeDelta.x, (float)_streamY);
+        }
+
+        bool done = hardCapHit
+                 || _streamNextIndex >= entries.Count
+                 || (maxResults > 0 && _streamMatches >= maxResults);
+        if (done)
+        {
+            browser.emptyTipText.gameObject.SetActive(_streamMatches == 0);
+            CancelStreaming();
+        }
+        else
+        {
+            // Streaming still going: suppress the empty tip so highly selective queries
+            // don't flicker "(empty)" for the first few frames before a match lands.
+            browser.emptyTipText.gameObject.SetActive(false);
+        }
     }
 
     // GetOrCreateFileItem is private in UIBlueprintBrowser. Use AccessTools to invoke it.

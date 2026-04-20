@@ -155,12 +155,18 @@ internal class SearchBarUI : MonoBehaviour
 
     private void Update()
     {
-        if (!SearchState.pendingRefresh) return;
-        float debounce = (BlueprintSearchPlugin.DebounceMs?.Value ?? 120) * 0.001f;
-        if (Time.unscaledTime - SearchState.lastChangeTime < debounce) return;
-        SearchState.pendingRefresh = false;
-        SearchState.tokens = SearchFilter.Tokenize(SearchState.query);
-        if (browser != null && browser.currentDirectoryInfo != null)
-            browser.SetCurrentDirectory(browser.currentDirectoryInfo.FullName);
+        if (SearchState.pendingRefresh)
+        {
+            float debounce = (BlueprintSearchPlugin.DebounceMs?.Value ?? 120) * 0.001f;
+            if (Time.unscaledTime - SearchState.lastChangeTime >= debounce)
+            {
+                SearchState.pendingRefresh = false;
+                SearchState.tokens = SearchFilter.Tokenize(SearchState.query);
+                if (browser != null && browser.currentDirectoryInfo != null)
+                    browser.SetCurrentDirectory(browser.currentDirectoryInfo.FullName);
+            }
+        }
+
+        Patches.UIBlueprintBrowserPatches.ContinueStreaming();
     }
 }
