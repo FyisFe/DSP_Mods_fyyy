@@ -1,18 +1,14 @@
 # BlueprintSearch
 
-Adds a search bar to the blueprint browser window. Type to filter blueprints across your entire library by path.
+Adds a search bar to the blueprint browser window.
 
-为蓝图库窗口添加搜索栏。输入关键词即可在整个蓝图库中按路径过滤蓝图。
+为蓝图库窗口添加搜索栏。
 
 ## Features / 功能
 
-- Search recursively across all folders, not just the current one / 跨所有文件夹递归搜索，不限于当前文件夹
-- Case-insensitive, space-separated AND tokens — e.g. `初期 电力` matches any path containing both words / 不区分大小写，空格分隔的 AND token —— 例如 `初期 电力` 会匹配同时包含两个词的路径
-- `/` and `\` also work as token separators, so pasted path fragments search naturally / `/` 和 `\` 同样作为 token 分隔符，粘贴路径片段可直接搜索
-- Right-click on a result to jump to its containing folder / 右键点击搜索结果即跳转到其所在文件夹
-- Toolbar buttons (cut/new-file/new-folder/up-level) are disabled while searching / 搜索时工具栏按钮（剪切/新建文件/新建文件夹/返回上级）自动禁用
-- 120 ms typing debounce to avoid rebuilding the grid on every keystroke / 120 毫秒输入防抖，避免每次按键都重建网格
-- Localized placeholder (English / Simplified Chinese) / 本地化占位符（英文 / 简体中文）
+- Search recursively across all folders / 跨所有文件夹递归搜索
+- Right-click on a result to jump to its containing folder / 右键点击搜索结果跳转到其所在文件夹
+- Left-click on the result to use / 左键点击结果即可使用
 
 ## Configuration / 配置
 

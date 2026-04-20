@@ -1,7 +1,7 @@
 {
   "name": "BlueprintSearch",
   "version_number": "1.0.0",
-  "website_url": "",
+  "website_url": "https://github.com/FyisFe/DSP_Mods_fyyy",
   "description": "Search bar for the blueprint browser / 蓝图库搜索栏",
   "dependencies": ["BepInEx-BepInExPack-5.4.21"]
 }
