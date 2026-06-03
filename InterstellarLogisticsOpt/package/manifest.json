@@ -2,9 +2,9 @@
   "name": "InterstellarLogisticsOpt",
   "version_number": "1.0.0",
   "website_url": "https://github.com/FyisFe/DSP_Mods_fyyy",
-  "description": "Reduces interstellar logistics CPU when idling: dispatch early-exit plus an optional scheduling-amortization knob (AmortizeFactor). / 降低挂机时星际物流的CPU开销：调度提前退出，以及可选的调度平摊系数(AmortizeFactor)",
+  "description": "Reduces interstellar logistics scheduling CPU cost / 降低星际物流调度 CPU 开销",
   "dependencies": [
     "xiaoye97-BepInEx-5.4.17",
-    "soarqin-UXAssist-1.4.0"
+    "soarqin-UXAssist-1.5.8"
   ]
 }

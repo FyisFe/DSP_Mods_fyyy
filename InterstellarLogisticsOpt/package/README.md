@@ -1,57 +1,44 @@
 # InterstellarLogisticsOpt
 
-Reduces the CPU cost of **interstellar (stellar) logistics** when idling with many
-logistics towers, via a dispatch early-exit (always on) and an optional scheduling
-amortization knob.
+依赖 / Requires **[UXAssist](https://thunderstore.io/c/dyson-sphere-program/p/soarqin/UXAssist/)**
 
-## What it does
+## 中文
 
-### 1. Scheduling amortization (`AmortizeFactor`, total CPU reduction)
+优化**星际物流**（星际运输塔）的调度开销，适用于上千座大塔的高强度冲糖场景。
 
-Vanilla clusters all interstellar dispatch onto 1-in-10 ticks (`t%10`), with the
-heaviest pass at `t%60` (once per second), leaving the other 9 of every 10 ticks
-free. With `AmortizeFactor >= 2` this mod instead schedules each tower every
-`period * factor` ticks (e.g. factor 5 → every 50/150/300 instead of 10/30/60) and
-spreads the work evenly across ticks. That **reduces total scheduler CPU** to
-`1/factor` while staying flat (no spikes), trading logistics responsiveness for CPU.
+两项优化：
 
-`AmortizeFactor = 1` (the default) runs the **vanilla scheduler unchanged**. Pure
-phase-dispersion at factor 1 was removed: it does the same total work as vanilla but
-taxes every tick instead of clustering, which on a tight per-tick frame budget causes
-*more* frequent micro-stutter than vanilla's single absorbable per-second spike. The
-real win is `AmortizeFactor >= 2`.
+- **调度提前退出**（默认开启）：对没有空闲运输船或电量不足的塔，直接跳过整轮供需配对扫描，省下白扫一圈的无用开销。
+- **调度平摊 `AmortizeFactor`**（默认 `1` = 关闭）：设为 `2` 及以上时，每座塔的调度频率降为原来的 `1/N`（如 `5` = 每 50/150/300 tick 调度一次），总开销降到 `1/N`，且逐帧平摊、不产生卡顿尖峰。代价是物流响应变慢。
 
-### 2. Dispatch early-exit (total CPU reduction)
+在游戏内 **UXAssist** 设置面板的「星际物流优化」标签页里实时开关与调节，无需重载存档。
 
-Vanilla checks "no idle ship / not enough energy" *inside* its per-pair dispatch
-loop, so a tower that cannot send anything still scans its entire supply/demand
-pair ring every scheduling tick before finding nothing to do. This mod hoists that
-check to the method entry: such towers are skipped in O(1). In an idle steady-state
-base many towers qualify, so this **reduces total CPU**, not just spikes.
+> 注：平摊会让派单顺序与原版略有差异（吞吐量不受影响）。联机或依赖回放一致性时请自行斟酌。
 
-Only interstellar logistics is affected. Local (planetary) logistics is untouched.
+## English
 
-## Configuration
+Cuts the scheduling CPU cost of **interstellar logistics** (stellar logistics stations) for large bases — thousands of stations under heavy throughput.
 
-Two settings, adjustable live from the in-game **UXAssist** config panel
-(its tab is labelled *星际物流优化 / InterstellarLogisticsOpt*) or in
-`BepInEx/config/org.fyyy.interstellarlogisticsopt.cfg`, section `[General]`:
+Two optimizations:
 
-- `Enabled` (default `true`) — master switch. Set to `false` to run fully vanilla.
-- `AmortizeFactor` (default `1`, range `1`–`30`) — scheduling amortization. `1` = off: runs the **vanilla scheduler unchanged** (recommended baseline). `2`+ schedules each tower every `period * factor` ticks instead of 10/30/60 (e.g. `5` → every 50/150/300), cutting total scheduler CPU to `1/factor` while keeping load evenly spread (no spikes). Trades logistics responsiveness for CPU — higher factors mean slower reaction to supply/demand changes. Requires `Enabled = true`.
+- **Dispatch early-exit** (always on): a station with no idle ship or too little energy skips the whole supply/demand scan instead of walking it just to find nothing to send.
+- **Amortization `AmortizeFactor`** (default `1` = off): set `2`+ to schedule each station `1/N` as often (e.g. `5` = every 50/150/300 ticks instead of 10/30/60), cutting total scheduler CPU to `1/N` with load spread evenly across ticks (no spikes). Trades logistics responsiveness for CPU.
 
-Both controls take effect immediately, no save reload needed.
+Toggle and tune live from the **InterstellarLogisticsOpt** tab in the in-game UXAssist panel — no save reload needed.
 
-Requires [UXAssist](https://thunderstore.io/c/dyson-sphere-program/p/soarqin/UXAssist/).
+> Note: amortization changes dispatch ordering slightly vs vanilla (throughput unaffected). Evaluate before relying on it for multiplayer / replay determinism.
 
-## Note on determinism
+## 性能对比 / Performance comparison
 
-With `AmortizeFactor >= 2`, towers competing for the same delivery are resolved
-across different ticks instead of all on one tick, so the exact "which supplier wins
-this order" sequence can differ from vanilla. The dispatch early-exit likewise skips a
-tower's priority-lock update and pair-cursor advance on ticks where it has nothing to
-send. (At `AmortizeFactor = 1` the scheduler is vanilla, so only the early-exit caveat
-applies.)
-Steady-state throughput is unaffected (cargo still flows, arguably more fairly), but
-per-frame behavior is **not** bit-identical to vanilla. If you play multiplayer or
-rely on replay determinism, evaluate before using.
+场景：约 400 万/min 宇宙矩阵存档，模拟帧 (sampleAndHoldSim) = 200。关闭 → 开启（`AmortizeFactor = 5`）。
+Scenario: ~4M/min universe-matrix save, simulated frames (sampleAndHoldSim) = 200; mod off → on (`AmortizeFactor = 5`).
+
+**CPU 19.016 ms → 13.172 ms（约 −31% / ~31% lower frame time）**，GPU 与内存基本不变 / GPU & memory unchanged.
+
+关闭 / Off — 19.016 ms
+
+![Off / 关闭](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/InterstellarLogisticsOpt/prior.png)
+
+开启 / On (`AmortizeFactor = 5`) — 13.172 ms
+
+![On / 开启](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/InterstellarLogisticsOpt/after.png)
