@@ -25,7 +25,7 @@ public class InterstellarLogisticsOptPlugin : BaseUnityPlugin
             "Phase-disperse interstellar logistics scheduling to flatten CPU spikes / 相位分散星际物流调度以削平卡顿");
         AmortizeFactor = Config.Bind("General", "AmortizeFactor", 1,
             new BepInEx.Configuration.ConfigDescription(
-                "Multiply each priority's scheduling interval by this factor to reduce total CPU (\"simulated frames\"). 1 = off (vanilla 10/30/60-tick cadence). E.g. 5 means each tower is scheduled every 50/150/300 ticks instead. Trades logistics responsiveness for CPU; load stays evenly spread across ticks (no spikes). Requires Enabled = true. / 把各优先级的调度间隔乘以该系数以降低总开销（\"模拟帧\"）。1=关闭。例如 5 表示每塔改为每 50/150/300 tick 调度一次。用调度响应速度换 CPU，且负载仍逐帧平摊不产生尖峰。需 Enabled=true。",
+                "Scheduling amortization (\"simulated frames\"). 1 = off: runs the vanilla scheduler unchanged (recommended baseline). 2+ enables phase-dispersed amortization — each tower is scheduled every period*factor ticks (e.g. 5 = every 50/150/300 instead of 10/30/60), cutting total CPU at the cost of logistics responsiveness; load stays evenly spread across ticks (no spikes). Requires Enabled = true. / 调度平摊系数（\"模拟帧\"）。1=关闭：原版调度逻辑不变（推荐基线）。2 及以上启用相位分散平摊——每塔改为每 period*factor tick 调度一次（如 5 = 每 50/150/300 而非 10/30/60），用调度响应速度换取更低的总 CPU，且负载仍逐帧平摊不产生尖峰。需 Enabled=true。",
                 new BepInEx.Configuration.AcceptableValueRange<int>(1, 30)));
 
         _harmony = new Harmony(PluginInfo.PLUGIN_GUID);
@@ -44,17 +44,20 @@ public class InterstellarLogisticsOptPlugin : BaseUnityPlugin
     static class GalacticTransportPatch
     {
         /// <summary>
-        /// Replaces GalacticTransport.GameTick with a phase-dispersed station sweep.
-        /// Each station slot is processed once per `period` ticks (10/30/60), offset
-        /// by `time % period` so the work is spread evenly across ticks instead of
-        /// all towers firing in phase. The inner priorityIndex2 / routePriority
-        /// dispatch branches are unchanged.
+        /// Replaces GalacticTransport.GameTick with an amortized, phase-dispersed
+        /// station sweep — but only when AmortizeFactor >= 2.
         ///
-        /// AmortizeFactor multiplies the effective period ("simulated frames"): with
-        /// factor C, each tower is scheduled every period*C ticks, cutting per-tick
-        /// work to N/(period*C) while keeping it evenly spread (no chunk spikes).
-        /// This is the spike-flat equivalent of BuildToolOpt's contiguous chunking,
-        /// trading scheduling responsiveness for total CPU. Factor 1 = vanilla cadence.
+        /// At AmortizeFactor == 1 we fall through to the vanilla GameTick unchanged.
+        /// Vanilla clusters all interstellar dispatch onto 1-in-10 ticks (leaving the
+        /// other 9 free) with a peak at t%60. Pure phase dispersion (factor 1) does the
+        /// SAME total work but taxes EVERY tick instead; when the per-tick frame budget
+        /// is already tight, that constant tax causes more frequent micro-stutter than
+        /// vanilla's single absorbable per-second spike, and it desyncs the per-station
+        /// priorityLocks that coordinate vanilla's same-tick priority passes. So factor 1
+        /// is now a no-op (identical to vanilla) — the genuine win is factor >= 2, which
+        /// actually REMOVES work: each tower is scheduled every period*factor ticks,
+        /// cutting per-tick load to N/(period*factor) while keeping it evenly spread
+        /// (no spikes). That trades scheduling responsiveness for total CPU.
         /// </summary>
         [HarmonyPrefix]
         [HarmonyPatch(typeof(GalacticTransport), nameof(GalacticTransport.GameTick))]
@@ -62,6 +65,10 @@ public class InterstellarLogisticsOptPlugin : BaseUnityPlugin
         {
             if (!ModEnabled.Value)
                 return true; // run vanilla GameTick
+
+            int factor = AmortizeFactor.Value;
+            if (factor <= 1)
+                return true; // factor 1 = vanilla cadence (no per-tick tax); see summary
 
             GameData gameData = __instance.gameData;
             GalaxyData galaxy = gameData.galaxy;
@@ -77,9 +84,6 @@ public class InterstellarLogisticsOptPlugin : BaseUnityPlugin
 
             StationComponent[] stationPool = __instance.stationPool;
             int stationCursor = __instance.stationCursor;
-
-            int factor = AmortizeFactor.Value;
-            if (factor < 1) factor = 1;
 
             for (int priorityIndex1 = 1; priorityIndex1 < 7; ++priorityIndex1)
             {
@@ -147,7 +151,7 @@ public class InterstellarLogisticsOptPlugin : BaseUnityPlugin
     {
         public static void Init()
         {
-            I18N.Add("InterstellarLogisticsOpt", "InterstellarLogisticsOpt", "星际物流调度优化");
+            I18N.Add("InterstellarLogisticsOpt", "InterstellarLogisticsOpt", "星际物流优化");
             I18N.Add("Phase-disperse interstellar logistics scheduling",
                 "Phase-disperse interstellar logistics scheduling",
                 "相位分散星际物流调度以削平卡顿");

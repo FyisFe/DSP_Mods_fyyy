@@ -2,7 +2,7 @@
   "name": "InterstellarLogisticsOpt",
   "version_number": "1.0.0",
   "website_url": "https://github.com/FyisFe/DSP_Mods_fyyy",
-  "description": "Flattens interstellar logistics CPU spikes by phase-dispersing the stellar scheduler (same dispatch frequency). / 相位分散星际物流调度，削平挂机时的CPU尖峰，调度频率不变",
+  "description": "Reduces interstellar logistics CPU when idling: dispatch early-exit plus an optional scheduling-amortization knob (AmortizeFactor). / 降低挂机时星际物流的CPU开销：调度提前退出，以及可选的调度平摊系数(AmortizeFactor)",
   "dependencies": [
     "xiaoye97-BepInEx-5.4.17",
     "soarqin-UXAssist-1.4.0"
