@@ -5,8 +5,6 @@ VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BuildingPosViewer", "BuildingPosViewer\BuildingPosViewer.csproj", "{CCC95772-A80E-A43F-744D-F0FC1AB947D0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RayReceiverOptimization", "RayReceiverOptimization\RayReceiverOptimization.csproj", "{4AD80501-E1CD-47B0-9285-BFE82F15C9E6}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XianTuEnhanced", "XianTuEnhanced\XianTuEnhanced.csproj", "{8462C1DD-AA62-45BD-BB0F-A3F18F9C2D43}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ColliderDumper", "ColliderDumper\ColliderDumper.csproj", "{43384BB3-79D3-4C8F-BC63-79CEBF6D808C}"
@@ -16,6 +14,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FullPhotonReceiver", "FullPhotonReceiver\FullPhotonReceiver.csproj", "{CA041C37-52C5-4E65-995C-632B0D0A46C2}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlueprintSearch", "BlueprintSearch\BlueprintSearch.csproj", "{44490AD3-44A7-493E-83AB-A54E751DA846}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeliveryPresets", "DeliveryPresets\DeliveryPresets.csproj", "{D1E92F33-7B4A-4F0E-9C2D-8AB1C4F50012}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InterstellarLogisticsOpt", "InterstellarLogisticsOpt\InterstellarLogisticsOpt.csproj", "{E2F8A1B4-3C5D-4E6F-9A0B-1C2D3E4F5A6B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -111,6 +113,30 @@ Global
 		{44490AD3-44A7-493E-83AB-A54E751DA846}.Release|x64.Build.0 = Release|Any CPU
 		{44490AD3-44A7-493E-83AB-A54E751DA846}.Release|x86.ActiveCfg = Release|Any CPU
 		{44490AD3-44A7-493E-83AB-A54E751DA846}.Release|x86.Build.0 = Release|Any CPU
+		{D1E92F33-7B4A-4F0E-9C2D-8AB1C4F50012}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D1E92F33-7B4A-4F0E-9C2D-8AB1C4F50012}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D1E92F33-7B4A-4F0E-9C2D-8AB1C4F50012}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D1E92F33-7B4A-4F0E-9C2D-8AB1C4F50012}.Debug|x64.Build.0 = Debug|Any CPU
+		{D1E92F33-7B4A-4F0E-9C2D-8AB1C4F50012}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D1E92F33-7B4A-4F0E-9C2D-8AB1C4F50012}.Debug|x86.Build.0 = Debug|Any CPU
+		{D1E92F33-7B4A-4F0E-9C2D-8AB1C4F50012}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D1E92F33-7B4A-4F0E-9C2D-8AB1C4F50012}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D1E92F33-7B4A-4F0E-9C2D-8AB1C4F50012}.Release|x64.ActiveCfg = Release|Any CPU
+		{D1E92F33-7B4A-4F0E-9C2D-8AB1C4F50012}.Release|x64.Build.0 = Release|Any CPU
+		{D1E92F33-7B4A-4F0E-9C2D-8AB1C4F50012}.Release|x86.ActiveCfg = Release|Any CPU
+		{D1E92F33-7B4A-4F0E-9C2D-8AB1C4F50012}.Release|x86.Build.0 = Release|Any CPU
+		{E2F8A1B4-3C5D-4E6F-9A0B-1C2D3E4F5A6B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E2F8A1B4-3C5D-4E6F-9A0B-1C2D3E4F5A6B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E2F8A1B4-3C5D-4E6F-9A0B-1C2D3E4F5A6B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E2F8A1B4-3C5D-4E6F-9A0B-1C2D3E4F5A6B}.Debug|x64.Build.0 = Debug|Any CPU
+		{E2F8A1B4-3C5D-4E6F-9A0B-1C2D3E4F5A6B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E2F8A1B4-3C5D-4E6F-9A0B-1C2D3E4F5A6B}.Debug|x86.Build.0 = Debug|Any CPU
+		{E2F8A1B4-3C5D-4E6F-9A0B-1C2D3E4F5A6B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E2F8A1B4-3C5D-4E6F-9A0B-1C2D3E4F5A6B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E2F8A1B4-3C5D-4E6F-9A0B-1C2D3E4F5A6B}.Release|x64.ActiveCfg = Release|Any CPU
+		{E2F8A1B4-3C5D-4E6F-9A0B-1C2D3E4F5A6B}.Release|x64.Build.0 = Release|Any CPU
+		{E2F8A1B4-3C5D-4E6F-9A0B-1C2D3E4F5A6B}.Release|x86.ActiveCfg = Release|Any CPU
+		{E2F8A1B4-3C5D-4E6F-9A0B-1C2D3E4F5A6B}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
