@@ -11,6 +11,7 @@ public class InterstellarLogisticsOptPlugin : BaseUnityPlugin
         BepInEx.Logging.Logger.CreateLogSource(PluginInfo.PLUGIN_NAME);
 
     public static ConfigEntry<bool> ModEnabled;
+    public static ConfigEntry<bool> DispatchEarlyExitEnabled;
 
     private Harmony _harmony;
 
@@ -18,9 +19,12 @@ public class InterstellarLogisticsOptPlugin : BaseUnityPlugin
     {
         ModEnabled = Config.Bind("General", "Enabled", true,
             "Phase-disperse interstellar logistics scheduling to flatten CPU spikes / 相位分散星际物流调度以削平卡顿");
+        DispatchEarlyExitEnabled = Config.Bind("General", "DispatchEarlyExit", true,
+            "Skip the full pair-ring scan for stations that have no idle ship or insufficient energy (reduces total CPU, not just spikes) / 对无闲船或能量不足的塔直接跳过整轮 pair 扫描（减少总开销，不只是削峰）");
 
         _harmony = new Harmony(PluginInfo.PLUGIN_GUID);
         _harmony.PatchAll(typeof(GalacticTransportPatch));
+        _harmony.PatchAll(typeof(DispatchPatch));
         Logger.LogInfo("InterstellarLogisticsOpt loaded.");
     }
 
@@ -87,6 +91,38 @@ public class InterstellarLogisticsOptPlugin : BaseUnityPlugin
             }
 
             return false; // skip the original method
+        }
+    }
+
+    static class DispatchPatch
+    {
+        /// <summary>
+        /// Early-exit for DetermineDispatch. Vanilla checks idleShipCount==0 / low
+        /// energy *inside* the do-while pair loop (StationComponent.cs:3013-3014),
+        /// so a station that cannot dispatch anything still scans its entire pair
+        /// ring (lock(storage) + field reads + trip recompute per pair) before
+        /// finding nothing to send. Hoisting the check to the method entry turns
+        /// that O(pairs) idle scan into O(1).
+        ///
+        /// Unlike phase dispersion (which only redistributes load across ticks),
+        /// this removes work outright, so it reduces total CPU — not just spikes.
+        ///
+        /// Semantics note: skipping the method also skips SetPriorityLock and the
+        /// remotePairProcesses cursor advance for these stations. Harmless for idle
+        /// steady state, but not bit-identical to vanilla (same caveat class as
+        /// phase dispersion).
+        /// </summary>
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(StationComponent), nameof(StationComponent.DetermineDispatch))]
+        static bool DetermineDispatch_Prefix(StationComponent __instance)
+        {
+            if (!DispatchEarlyExitEnabled.Value)
+                return true; // run vanilla DetermineDispatch
+
+            if (__instance.idleShipCount == 0 || __instance.energy <= 6000000L)
+                return false; // nothing dispatchable — skip the whole pair-ring scan
+
+            return true;
         }
     }
 }
