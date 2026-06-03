@@ -12,6 +12,7 @@ public class InterstellarLogisticsOptPlugin : BaseUnityPlugin
 
     public static ConfigEntry<bool> ModEnabled;
     public static ConfigEntry<bool> DispatchEarlyExitEnabled;
+    public static ConfigEntry<int> AmortizeFactor;
 
     private Harmony _harmony;
 
@@ -21,6 +22,10 @@ public class InterstellarLogisticsOptPlugin : BaseUnityPlugin
             "Phase-disperse interstellar logistics scheduling to flatten CPU spikes / 相位分散星际物流调度以削平卡顿");
         DispatchEarlyExitEnabled = Config.Bind("General", "DispatchEarlyExit", true,
             "Skip the full pair-ring scan for stations that have no idle ship or insufficient energy (reduces total CPU, not just spikes) / 对无闲船或能量不足的塔直接跳过整轮 pair 扫描（减少总开销，不只是削峰）");
+        AmortizeFactor = Config.Bind("General", "AmortizeFactor", 1,
+            new BepInEx.Configuration.ConfigDescription(
+                "Multiply each priority's scheduling interval by this factor to reduce total CPU (\"simulated frames\"). 1 = off (vanilla 10/30/60-tick cadence). E.g. 5 means each tower is scheduled every 50/150/300 ticks instead. Trades logistics responsiveness for CPU; load stays evenly spread across ticks (no spikes). Requires Enabled = true. / 把各优先级的调度间隔乘以该系数以降低总开销（\"模拟帧\"）。1=关闭。例如 5 表示每塔改为每 50/150/300 tick 调度一次。用调度响应速度换 CPU，且负载仍逐帧平摊不产生尖峰。需 Enabled=true。",
+                new BepInEx.Configuration.AcceptableValueRange<int>(1, 30)));
 
         _harmony = new Harmony(PluginInfo.PLUGIN_GUID);
         _harmony.PatchAll(typeof(GalacticTransportPatch));
@@ -37,10 +42,16 @@ public class InterstellarLogisticsOptPlugin : BaseUnityPlugin
     {
         /// <summary>
         /// Replaces GalacticTransport.GameTick with a phase-dispersed station sweep.
-        /// Each station slot is still processed once per `period` ticks (10/30/60,
-        /// identical cadence to vanilla), but offset by `time % period` so the work
-        /// is spread evenly across ticks instead of all towers firing in phase.
-        /// The inner priorityIndex2 / routePriority dispatch branches are unchanged.
+        /// Each station slot is processed once per `period` ticks (10/30/60), offset
+        /// by `time % period` so the work is spread evenly across ticks instead of
+        /// all towers firing in phase. The inner priorityIndex2 / routePriority
+        /// dispatch branches are unchanged.
+        ///
+        /// AmortizeFactor multiplies the effective period ("simulated frames"): with
+        /// factor C, each tower is scheduled every period*C ticks, cutting per-tick
+        /// work to N/(period*C) while keeping it evenly spread (no chunk spikes).
+        /// This is the spike-flat equivalent of BuildToolOpt's contiguous chunking,
+        /// trading scheduling responsiveness for total CPU. Factor 1 = vanilla cadence.
         /// </summary>
         [HarmonyPrefix]
         [HarmonyPatch(typeof(GalacticTransport), nameof(GalacticTransport.GameTick))]
@@ -64,12 +75,15 @@ public class InterstellarLogisticsOptPlugin : BaseUnityPlugin
             StationComponent[] stationPool = __instance.stationPool;
             int stationCursor = __instance.stationCursor;
 
+            int factor = AmortizeFactor.Value;
+            if (factor < 1) factor = 1;
+
             for (int priorityIndex1 = 1; priorityIndex1 < 7; ++priorityIndex1)
             {
                 int priorityIndex2 = priorityIndex1 % 6;
-                int period = (priorityIndex1 == 1) ? 10
+                int period = ((priorityIndex1 == 1) ? 10
                            : (priorityIndex1 == 2 || priorityIndex1 == 3) ? 30
-                           : 60;
+                           : 60) * factor;
                 int phase = (int)(time % period);
 
                 for (int index = 1 + phase; index < stationCursor; index += period)

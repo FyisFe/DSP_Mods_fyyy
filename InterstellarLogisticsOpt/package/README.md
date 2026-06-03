@@ -17,6 +17,7 @@ often any tower is scheduled** (still every 10 / 30 / 60 ticks). Peak per-tick
 scheduler load drops by roughly 96% with no change to logistics throughput.
 
 Note: this **redistributes** load to remove stutter — it does not reduce total CPU.
+To also reduce total CPU here, see `AmortizeFactor` below.
 
 ### 2. Dispatch early-exit (total CPU reduction)
 
@@ -34,6 +35,7 @@ Only interstellar logistics is affected. Local (planetary) logistics is untouche
 
 - `Enabled` (default `true`) — phase dispersion. Set to `false` to run the vanilla scheduler.
 - `DispatchEarlyExit` (default `true`) — skip the full pair-ring scan for towers with no idle ship or insufficient energy.
+- `AmortizeFactor` (default `1`, range `1`–`30`) — multiply each priority's scheduling interval by this factor ("simulated frames") to cut total CPU. `1` = off (vanilla 10/30/60-tick cadence). E.g. `5` schedules each tower every 50/150/300 ticks instead, reducing per-tick work to a fifth while keeping it evenly spread across ticks (no spikes). This trades logistics responsiveness for CPU — higher factors mean slower reaction to supply/demand changes. Requires `Enabled = true`.
 
 ## Note on determinism
 
