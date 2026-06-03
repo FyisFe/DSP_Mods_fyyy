@@ -6,7 +6,7 @@
     <AssemblyName>InterstellarLogisticsOpt</AssemblyName>
     <BepInExPluginGuid>org.fyyy.interstellarlogisticsopt</BepInExPluginGuid>
     <Description>Phase-disperses interstellar logistics scheduling to flatten CPU spikes / 相位分散星际物流调度以削平卡顿</Description>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>https://nuget.bepinex.dev/v3/index.json</RestoreAdditionalProjectSources>

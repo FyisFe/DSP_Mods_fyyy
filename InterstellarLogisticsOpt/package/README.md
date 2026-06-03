@@ -13,8 +13,6 @@
 
 在游戏内 **UXAssist** 设置面板的「星际物流优化」标签页里实时开关与调节，无需重载存档。
 
-> 注：平摊会让派单顺序与原版略有差异（吞吐量不受影响）。联机或依赖回放一致性时请自行斟酌。
-
 ## English
 
 Cuts the scheduling CPU cost of **interstellar logistics** (stellar logistics stations) for large bases — thousands of stations under heavy throughput.
@@ -25,8 +23,6 @@ Two optimizations:
 - **Amortization `AmortizeFactor`** (default `1` = off): set `2`+ to schedule each station `1/N` as often (e.g. `5` = every 50/150/300 ticks instead of 10/30/60), cutting total scheduler CPU to `1/N` with load spread evenly across ticks (no spikes). Trades logistics responsiveness for CPU.
 
 Toggle and tune live from the **InterstellarLogisticsOpt** tab in the in-game UXAssist panel — no save reload needed.
-
-> Note: amortization changes dispatch ordering slightly vs vanilla (throughput unaffected). Evaluate before relying on it for multiplayer / replay determinism.
 
 ## 性能对比 / Performance comparison
 

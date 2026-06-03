@@ -1,6 +1,6 @@
 {
   "name": "InterstellarLogisticsOpt",
-  "version_number": "1.0.0",
+  "version_number": "1.1.0",
   "website_url": "https://github.com/FyisFe/DSP_Mods_fyyy",
   "description": "Reduces interstellar logistics scheduling CPU cost / 降低星际物流调度 CPU 开销",
   "dependencies": [
