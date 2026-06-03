@@ -5,7 +5,7 @@ with many logistics towers.
 
 ## What it does
 
-Two independent optimizations, each with its own toggle:
+Two optimizations, both active whenever the mod is enabled:
 
 ### 1. Phase dispersion (spike flattening)
 
@@ -31,11 +31,16 @@ Only interstellar logistics is affected. Local (planetary) logistics is untouche
 
 ## Configuration
 
+Two settings, adjustable live from the in-game **UXAssist** config panel
+(its tab is labelled *星际物流调度优化 / InterstellarLogisticsOpt*) or in
 `BepInEx/config/org.fyyy.interstellarlogisticsopt.cfg`, section `[General]`:
 
-- `Enabled` (default `true`) — phase dispersion. Set to `false` to run the vanilla scheduler.
-- `DispatchEarlyExit` (default `true`) — skip the full pair-ring scan for towers with no idle ship or insufficient energy.
+- `Enabled` (default `true`) — master switch for both optimizations above. Set to `false` to run the vanilla scheduler.
 - `AmortizeFactor` (default `1`, range `1`–`30`) — multiply each priority's scheduling interval by this factor ("simulated frames") to cut total CPU. `1` = off (vanilla 10/30/60-tick cadence). E.g. `5` schedules each tower every 50/150/300 ticks instead, reducing per-tick work to a fifth while keeping it evenly spread across ticks (no spikes). This trades logistics responsiveness for CPU — higher factors mean slower reaction to supply/demand changes. Requires `Enabled = true`.
+
+Both controls take effect immediately, no save reload needed.
+
+Requires [UXAssist](https://thunderstore.io/c/dyson-sphere-program/p/soarqin/UXAssist/).
 
 ## Note on determinism
 

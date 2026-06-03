@@ -4,6 +4,7 @@
   "website_url": "https://github.com/FyisFe/DSP_Mods_fyyy",
   "description": "Flattens interstellar logistics CPU spikes by phase-dispersing the stellar scheduler (same dispatch frequency). / 相位分散星际物流调度，削平挂机时的CPU尖峰，调度频率不变",
   "dependencies": [
-    "xiaoye97-BepInEx-5.4.17"
+    "xiaoye97-BepInEx-5.4.17",
+    "soarqin-UXAssist-1.4.0"
   ]
 }
