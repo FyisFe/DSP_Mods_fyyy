@@ -1,7 +1,7 @@
 # DashboardOverhaul
 
-为游戏内**仪表盘**补全多页界面——顶部标签栏。零额外依赖、不改存档格式、始终生效。
-Adds the missing multi-page UI to the in-game **Dashboard** — a top tab bar. No extra mod dependencies (BepInEx only), no save-format change, always on.
+为游戏内**仪表盘**补全缺失的界面：顶部多页标签栏，以及直接在图表上重命名 / 删除统计项。零额外依赖、不改存档格式、始终生效。
+Completes the in-game **Dashboard**'s missing UI: a top multi-page tab bar, plus renaming / deleting a chart's statistic right from the chart. No extra mod dependencies (BepInEx only), no save-format change, always on.
 
 ## 功能 / Features
 
@@ -31,3 +31,7 @@ Adds the missing multi-page UI to the in-game **Dashboard** — a top tab bar. N
 把图表移动到其它页面 / Move a chart to another page:
 
 ![Move chart to page](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/DashboardOverhaul/screenshots/move-to-page.png)
+
+在图表上直接重命名统计项（双击标题或右键 → 重命名）/ Rename a chart's statistic in place (double-click the title, or right-click → Rename):
+
+![Rename a chart in place](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/DashboardOverhaul/screenshots/chart-rename.png)
