@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace DashboardOverhaul;
 
 /// <summary>
@@ -76,6 +78,50 @@ public static class PageOps
         page.Free();
         pages[index] = null;
         return true;
+    }
+
+    /// <summary>
+    /// Reorders pages to match <paramref name="newOrder"/> (the desired left-to-right display
+    /// order), compacting them into slots 1..N and nulling the rest. <paramref name="newOrder"/>
+    /// must contain exactly the current set of non-null pages (same count and members); on any
+    /// mismatch this is a no-op (defensive). Repoints currentView.pageIndex to wherever the
+    /// previously-viewed page object lands, so the player stays on the same page. Slot index is the
+    /// page's save key (DashboardLayout.Export/Import is slot-by-slot), so the new order persists on
+    /// the next game save with no format change.
+    /// </summary>
+    public static void ReorderPages(CustomCharts charts, IReadOnlyList<DashboardPage> newOrder)
+    {
+        var pages = charts?.dashboardLayout?.pages;
+        if (pages == null || newOrder == null) return;
+
+        // Validate that newOrder is a permutation of the current non-null pages.
+        int active = ActivePageCount(charts);
+        var set = new HashSet<DashboardPage>();
+        foreach (var p in newOrder)
+        {
+            if (p == null) return;
+            set.Add(p);
+        }
+        if (set.Count != active) return;                 // duplicates or wrong count
+        for (int i = 1; i < DashboardLayout.MAX_PAGE_COUNT; i++)
+            if (pages[i] != null && !set.Contains(pages[i])) return; // a current page is missing
+
+        // Remember the page the player is viewing (by reference) so we can follow it.
+        int cur = charts.currentView.pageIndex;
+        DashboardPage viewed = (cur >= 1 && cur < DashboardLayout.MAX_PAGE_COUNT) ? pages[cur] : null;
+
+        // Write the new order into slots 1..N; null the remainder.
+        for (int i = 0; i < newOrder.Count; i++)
+            pages[i + 1] = newOrder[i];
+        for (int i = newOrder.Count + 1; i < DashboardLayout.MAX_PAGE_COUNT; i++)
+            pages[i] = null;
+
+        // Repoint the current view to the viewed page's new slot (fallback: first slot).
+        int newCur = 1;
+        if (viewed != null)
+            for (int i = 1; i < DashboardLayout.MAX_PAGE_COUNT; i++)
+                if (pages[i] == viewed) { newCur = i; break; }
+        charts.currentView.pageIndex = newCur;
     }
 
     public static void RenamePage(DashboardPage page, string newName)
