@@ -19,25 +19,37 @@ public static class UIChartPatch
         var layout = charts.dashboardLayout;
         int cur = charts.currentView.pageIndex;
 
-        // Collect other existing pages (the chart lives on the current page).
+        // "Move to page →" — only when another existing page is available as a target.
         var targets = new List<int>();
         for (int i = 1; i < DashboardLayout.MAX_PAGE_COUNT; i++)
             if (i != cur && layout.pages[i] != null) targets.Add(i);
-        if (targets.Count == 0) return; // nowhere to move to
-
-        var moveBtn = popupMenu.AddMenuButton(Loc.L("移动到页面", "Move to page"), -1, true);
-        var child = __instance.CreateAndInitChildPopupMenu(moveBtn);
-        foreach (int slot in targets)
+        if (targets.Count > 0)
         {
-            var page = layout.pages[slot];
-            string name = string.IsNullOrEmpty(page.name) ? slot.ToString() : page.name;
-            var b = child.AddMenuButton(name);
-            b.data = slot;
-            b.onMenuButtonClick += s => MoveChartToPage(__instance, s);
-            b.SetState(true);
+            var moveBtn = popupMenu.AddMenuButton(Loc.L("移动到页面", "Move to page"), -1, true);
+            var child = __instance.CreateAndInitChildPopupMenu(moveBtn);
+            foreach (int slot in targets)
+            {
+                var page = layout.pages[slot];
+                string name = string.IsNullOrEmpty(page.name) ? slot.ToString() : page.name;
+                var b = child.AddMenuButton(name);
+                b.data = slot;
+                b.onMenuButtonClick += s => MoveChartToPage(__instance, s);
+                b.SetState(true);
+            }
+            moveBtn.m_ChildMenu = child;
+            moveBtn.SetState(true);
         }
-        moveBtn.m_ChildMenu = child;
-        moveBtn.SetState(true);
+
+        // Rename (edits the bound StatPlan's name; affects all charts of that statistic).
+        var renameBtn = popupMenu.AddMenuButton(Loc.L("重命名", "Rename"), -1, true);
+        renameBtn.onMenuButtonClick += _ =>
+        {
+            var dash = __instance.uiDashboard;
+            if (dash != null) dash.CloseChartPopupMenu();
+            ChartRename.Begin(__instance);
+        };
+        renameBtn.SetState(true);
+
         popupMenu.SetState(true);
     }
 
