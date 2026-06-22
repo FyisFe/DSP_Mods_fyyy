@@ -6,7 +6,9 @@
 
 **Architecture:** 独立 BepInEx 插件，用 Harmony 把一条标签栏注入 `UIDashboard`，由纯逻辑层 `PageOps` 操作现成的 `CustomCharts.dashboardLayout`（原版 9 页结构），右键菜单复用游戏 `UIPopupMenu`。不新增存档数据。
 
-**Tech Stack:** C# / net472 / BepInEx 5 / HarmonyX / Unity UGUI / UXAssist（I18N）。
+**Tech Stack:** C# / net472 / BepInEx 5 / HarmonyX / Unity UGUI.
+
+> **已发布状态说明（2026-06-21）:** 实际实现已超出本计划；最新设计以同目录 `specs/2026-06-21-dashboard-paging-design.md` 为准。主要差异：移除 UXAssist 依赖（改用自带 `Loc`）、移除 `Enabled` 开关（始终生效）、新增「图表跨页移动」（patch `UIChart` 右键菜单）、标签栏跟随侧栏（`_OnUpdate`）、切页只更新高亮（修复双击）、`+` 号用 `Image` 条绘制（游戏字体无 `+` 字形）。
 
 ## Global Constraints
 

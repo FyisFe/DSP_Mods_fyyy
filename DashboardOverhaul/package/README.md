@@ -7,5 +7,3 @@
 Completes the in-game Dashboard's unshipped multi-page UI: a top tab bar to
 switch / add / delete / rename pages, plus a "Move to page" entry in each chart's
 right-click menu (vanilla already stored up to 9 pages).
-
-无额外依赖 / No extra dependencies.
