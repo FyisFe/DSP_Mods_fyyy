@@ -13,10 +13,10 @@ public class PageTabBar
     private InputField _renameInput;
     private int _renamingSlot = -1;
 
-    private const int kTabHeight = 26;
+    private const int kTabHeight = 20;
     private const int kTabMinWidth = 64;
     private const float kBaseLeftMargin = 40f;
-    private const float kTopOffset = -8f;
+    private const float kTopOffset = -4f;
 
     public void Build(UIDashboard dashboard)
     {
@@ -42,20 +42,6 @@ public class PageTabBar
         layout.childControlHeight = true;
         var fitter = go.AddComponent<ContentSizeFitter>();
         fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
-
-        // 预留顶部条带：把图表画布与网格整体下移，避免图表被标签栏盖住。
-        // 同步平移二者（坐标换算用的是网格 rect 的尺寸，不受位移影响），保持对齐。
-        float reserve = (-kTopOffset) + kTabHeight + 6f;
-        ShiftDown(dashboard.chartContentRt, reserve);
-        if (dashboard.gridRawImage != null &&
-            !dashboard.gridRawImage.rectTransform.IsChildOf(dashboard.chartContentRt))
-            ShiftDown(dashboard.gridRawImage.rectTransform, reserve);
-    }
-
-    private static void ShiftDown(RectTransform rt, float h)
-    {
-        if (rt != null)
-            rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, rt.anchoredPosition.y - h);
     }
 
     public void Free()
