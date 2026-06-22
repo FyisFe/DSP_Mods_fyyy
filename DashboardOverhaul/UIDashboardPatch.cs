@@ -23,6 +23,13 @@ public static class UIDashboardPatch
     }
 
     [HarmonyPostfix]
+    [HarmonyPatch(typeof(UIDashboard), "_OnUpdate")]
+    static void OnUpdate_Postfix()
+    {
+        if (Bar != null) Bar.UpdateLayout();
+    }
+
+    [HarmonyPostfix]
     [HarmonyPatch(typeof(UIDashboard), "_OnDestroy")]
     static void OnDestroy_Postfix()
     {

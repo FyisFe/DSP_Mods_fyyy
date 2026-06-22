@@ -15,6 +15,8 @@ public class PageTabBar
 
     private const int kTabHeight = 26;
     private const int kTabMinWidth = 64;
+    private const float kBaseLeftMargin = 40f;
+    private const float kTopOffset = -8f;
 
     public void Build(UIDashboard dashboard)
     {
@@ -25,11 +27,11 @@ public class PageTabBar
         var go = new GameObject("DO_PageTabBar", typeof(RectTransform));
         _root = (RectTransform)go.transform;
         _root.SetParent(dashboard.rectTrans, false);
-        // 顶部横排，左上锚点，自栏目顶部下移一点
+        // 顶部横排，左上锚点
         _root.anchorMin = new Vector2(0f, 1f);
         _root.anchorMax = new Vector2(0f, 1f);
         _root.pivot = new Vector2(0f, 1f);
-        _root.anchoredPosition = new Vector2(40f, -8f); // 注：位置可能需游戏内微调
+        _root.anchoredPosition = new Vector2(kBaseLeftMargin, kTopOffset);
         _root.sizeDelta = new Vector2(0f, kTabHeight);
 
         var layout = go.AddComponent<HorizontalLayoutGroup>();
@@ -50,6 +52,18 @@ public class PageTabBar
         _renamingSlot = -1;
         _tabs.Clear();
         Dashboard = null;
+    }
+
+    /// <summary>Keep the tab bar clear of the sliding sidebar: offset its x by the
+    /// sidebar's currently-visible width so the tabs slide along with it.</summary>
+    public void UpdateLayout()
+    {
+        if (_root == null || Dashboard == null) return;
+        float offset = 0f;
+        var sidebar = Dashboard.statboardTestRt;
+        if (sidebar != null)
+            offset = Mathf.Max(0f, sidebar.rect.width + sidebar.anchoredPosition.x);
+        _root.anchoredPosition = new Vector2(kBaseLeftMargin + offset, kTopOffset);
     }
 
     public void Refresh()
@@ -107,8 +121,16 @@ public class PageTabBar
     public void SwitchTo(int slot)
     {
         if (Dashboard == null) return;
-        Dashboard.SetViewPage(slot); // 原版方法：切页并重排图表
-        Refresh();
+        Dashboard.SetViewPage(slot);  // 原版方法：切页并重排图表
+        UpdateHighlights();           // 只更新高亮，不重建标签（重建会打断双击重命名）
+    }
+
+    private void UpdateHighlights()
+    {
+        if (Dashboard == null || Dashboard.charts == null) return;
+        int current = Dashboard.charts.currentView.pageIndex;
+        foreach (var t in _tabs)
+            if (t != null) t.SetCurrent(t.Slot == current);
     }
 
     public void AddNewPage()
@@ -117,10 +139,11 @@ public class PageTabBar
         int slot = PageOps.AddPage(Dashboard.charts);
         if (slot < 0)
         {
-            UIRealtimeTip.Popup("已达页面上限".Translate());
+            UIRealtimeTip.Popup(Loc.L("已达页面上限", "Page limit reached"));
             return;
         }
-        SwitchTo(slot); // 切到新页并 Refresh
+        Dashboard.SetViewPage(slot);
+        Refresh(); // 页集合变化，需重建标签
     }
 
     private void CreateAddButton()
@@ -214,11 +237,11 @@ public class PageTabBar
         var menu = Dashboard.OpenChartPopupMenu(new Vector2(0f, -kTabHeight), tabRt);
         menu.m_RectTrans.SetParent(Dashboard.chartContentRt);
 
-        var rename = menu.AddMenuButton("重命名".Translate());
+        var rename = menu.AddMenuButton(Loc.L("重命名", "Rename"));
         rename.onMenuButtonClick += _ => { Dashboard.CloseChartPopupMenu(); BeginRename(tab); };
         rename.SetState(true);
 
-        var del = menu.AddMenuButton("删除".Translate());
+        var del = menu.AddMenuButton(Loc.L("删除", "Delete"));
         del.onMenuButtonClick += _ => { Dashboard.CloseChartPopupMenu(); DeletePage(tab); };
         del.SetState(true);
 
@@ -230,15 +253,16 @@ public class PageTabBar
         var charts = Dashboard.charts;
         if (!PageOps.CanDelete(charts))
         {
-            UIRealtimeTip.Popup("至少保留一页".Translate());
+            UIRealtimeTip.Popup(Loc.L("至少保留一页", "Keep at least one page"));
             return;
         }
         int slot = tab.Slot;
         var page = charts.dashboardLayout.pages[slot];
         bool hasCharts = page != null && page.chartDatas != null && page.chartDatas.Count > 0;
         if (hasCharts)
-            UIMessageBox.Show("删除页面标题".Translate(), "删除页面提示".Translate(),
-                "取消".Translate(), "确定".Translate(), 1,
+            UIMessageBox.Show(Loc.L("删除页面", "Delete page"),
+                Loc.L("确认删除该页及其图表？", "Delete this page and its charts?"),
+                Loc.L("取消", "Cancel"), Loc.L("确定", "OK"), 1,
                 (UIMessageBox.Response)null, new UIMessageBox.Response(() => DoDeletePage(slot)));
         else
             DoDeletePage(slot);
