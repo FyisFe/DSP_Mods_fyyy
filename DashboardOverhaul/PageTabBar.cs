@@ -110,6 +110,9 @@ public class PageTabBar
         text.alignment = TextAnchor.MiddleCenter;
         text.color = Color.white;
         text.raycastTarget = false;
+        // 矮条带下字体行高可能超过文本框 → 默认会被截断为空白；用 Overflow 保证始终渲染
+        text.horizontalOverflow = HorizontalWrapMode.Overflow;
+        text.verticalOverflow = VerticalWrapMode.Overflow;
 
         var tab = go.AddComponent<PageTab>();
         tab.Label = text;
@@ -201,6 +204,7 @@ public class PageTabBar
         var text = textGo.AddComponent<Text>();
         text.font = _font; text.fontSize = 14; text.alignment = TextAnchor.MiddleLeft;
         text.color = Color.white; text.supportRichText = false;
+        text.verticalOverflow = VerticalWrapMode.Overflow;
 
         var input = go.AddComponent<InputField>();
         input.textComponent = text;
