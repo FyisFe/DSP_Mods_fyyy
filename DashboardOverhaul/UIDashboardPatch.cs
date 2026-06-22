@@ -10,7 +10,6 @@ public static class UIDashboardPatch
     [HarmonyPatch(typeof(UIDashboard), "_OnCreate")]
     static void OnCreate_Postfix(UIDashboard __instance)
     {
-        if (!DashboardOverhaulPlugin.ModEnabled.Value) return;
         Bar = new PageTabBar();
         Bar.Build(__instance);
     }

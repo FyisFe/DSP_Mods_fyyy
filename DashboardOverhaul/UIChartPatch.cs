@@ -13,7 +13,6 @@ public static class UIChartPatch
     [HarmonyPatch(typeof(UIChart), nameof(UIChart.SetPopupMenuButtons))]
     static void SetPopupMenuButtons_Postfix(UIChart __instance, UIPopupMenu popupMenu)
     {
-        if (!DashboardOverhaulPlugin.ModEnabled.Value) return;
         var charts = __instance.charts;
         if (charts == null || __instance.chartData == null) return;
         var layout = charts.dashboardLayout;

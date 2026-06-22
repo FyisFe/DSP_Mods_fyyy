@@ -1,5 +1,4 @@
 using BepInEx;
-using BepInEx.Configuration;
 using HarmonyLib;
 
 namespace DashboardOverhaul;
@@ -10,15 +9,10 @@ public class DashboardOverhaulPlugin : BaseUnityPlugin
     public new static readonly BepInEx.Logging.ManualLogSource Logger =
         BepInEx.Logging.Logger.CreateLogSource(PluginInfo.PLUGIN_NAME);
 
-    public static ConfigEntry<bool> ModEnabled;
-
     private Harmony _harmony;
 
     private void Awake()
     {
-        ModEnabled = Config.Bind("General", "Enabled", true,
-            "Enable the Dashboard paging UI / 启用仪表盘分页界面");
-
         _harmony = new Harmony(PluginInfo.PLUGIN_GUID);
         _harmony.PatchAll(typeof(UIDashboardPatch));
         _harmony.PatchAll(typeof(UIChartPatch));
