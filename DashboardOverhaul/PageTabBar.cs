@@ -160,18 +160,26 @@ public class PageTabBar
         le.minWidth = kTabHeight; // 方形
         le.preferredHeight = kTabHeight;
 
-        var textGo = new GameObject("Text", typeof(RectTransform));
-        var trt = (RectTransform)textGo.transform;
-        trt.SetParent(rt, false);
-        trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one;
-        trt.offsetMin = Vector2.zero; trt.offsetMax = Vector2.zero;
-        var text = textGo.AddComponent<Text>();
-        text.font = _font; text.fontSize = 18; text.alignment = TextAnchor.MiddleCenter;
-        text.color = Color.white; text.text = "+"; text.raycastTarget = false;
+        // 用两条白色 Image 拼出 "+"，避免依赖游戏字体是否包含 '+' 字形（部分字体不渲染）
+        AddPlusBar(rt, 12f, 2f);
+        AddPlusBar(rt, 2f, 12f);
 
         var btn = go.AddComponent<Button>();
         btn.targetGraphic = bg;
         btn.onClick.AddListener(AddNewPage);
+    }
+
+    private static void AddPlusBar(RectTransform parent, float w, float h)
+    {
+        var go = new GameObject("Bar", typeof(RectTransform));
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(parent, false);
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = Vector2.zero;
+        rt.sizeDelta = new Vector2(w, h);
+        var img = go.AddComponent<Image>();
+        img.color = Color.white;
+        img.raycastTarget = false;
     }
 
     private InputField EnsureRenameInput()
