@@ -50,6 +50,12 @@ public static class UIChartPatch
         };
         renameBtn.SetState(true);
 
+        // Delete statistic — removes this widget AND every copy on all pages + the sidebar entry
+        // (distinct from vanilla "Close chart", which removes only this one widget).
+        var deleteBtn = popupMenu.AddMenuButton(Loc.L("删除统计项", "Delete statistic"));
+        deleteBtn.onMenuButtonClick += _ => ConfirmDelete(__instance);
+        deleteBtn.SetState(true);
+
         popupMenu.SetState(true);
     }
 
@@ -118,5 +124,37 @@ public static class UIChartPatch
                 if (!Overlaps(page, p, size)) return p;
             }
         return fallback;
+    }
+
+    /// <summary>Closes the popup, cancels any rename on this chart, and shows the game's own
+    /// "delete statistic" confirm dialog. Captures dashboard/charts/id up front so the deferred
+    /// callback doesn't depend on the (possibly pooled) chart still holding its chartData.</summary>
+    static void ConfirmDelete(UIChart chart)
+    {
+        if (chart == null || chart.chartData == null || chart.charts == null) return;
+        var dash = chart.uiDashboard;
+        var charts = chart.charts;
+        int id = chart.chartData.statPlanId;
+        if (dash != null) dash.CloseChartPopupMenu();
+        ChartRename.CancelIfTargeting(chart);
+        UIMessageBox.Show(
+            "确认删除统计项标题".Translate(),
+            "确认删除统计项提示".Translate(),
+            "取消".Translate(), "确定".Translate(), 1,
+            (UIMessageBox.Response)null,
+            new UIMessageBox.Response(() => DoDelete(dash, charts, id)));
+    }
+
+    /// <summary>Removes the statistic and all its charts everywhere, then rebuilds the page and
+    /// refreshes the sidebar.</summary>
+    static void DoDelete(UIDashboard dash, CustomCharts charts, int id)
+    {
+        if (charts == null) return;
+        charts.RemoveStatPlan(id);                 // pool + all pages + watch layout (frees ChartData)
+        if (dash != null)
+        {
+            dash.DetermineCharts();                // rebuild current page; orphan widget auto-freed
+            if (dash.statboard != null) dash.statboard.DetermineEntryVisible();
+        }
     }
 }
