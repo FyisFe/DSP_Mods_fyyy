@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using HarmonyLib;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -59,7 +58,7 @@ public class PageTabBar
             Object.Destroy(_root.GetChild(c).gameObject);
         _tabs.Clear();
 
-        var charts = Traverse.Create(Dashboard).Field<CustomCharts>("charts").Value;
+        var charts = Dashboard.charts;
         if (charts == null) return;
         var pages = charts.dashboardLayout.pages;
         int current = charts.currentView.pageIndex;
