@@ -20,6 +20,7 @@ public class PageTabBar
     {
         Dashboard = dashboard;
         _font = dashboard.emptyTip != null ? dashboard.emptyTip.font : null;
+        if (_font == null) DashboardOverhaulPlugin.Logger.LogWarning("[DashboardOverhaul] emptyTip/font is null; tab labels may be invisible.");
 
         var go = new GameObject("DO_PageTabBar", typeof(RectTransform));
         _root = (RectTransform)go.transform;
@@ -182,6 +183,7 @@ public class PageTabBar
 
     public void BeginRename(PageTab tab)
     {
+        if (_root == null || Dashboard == null || Dashboard.charts == null) return;
         var input = EnsureRenameInput();
         _renamingSlot = tab.Slot;
         var page = Dashboard.charts.dashboardLayout.pages[tab.Slot];
@@ -198,7 +200,7 @@ public class PageTabBar
 
     private void CommitRename(string value)
     {
-        if (_renamingSlot < 0) return;
+        if (_renamingSlot < 0 || Dashboard == null || Dashboard.charts == null) { _renamingSlot = -1; return; }
         var page = Dashboard.charts.dashboardLayout.pages[_renamingSlot];
         PageOps.RenamePage(page, value);
         _renamingSlot = -1;
@@ -210,6 +212,7 @@ public class PageTabBar
     {
         var tabRt = (RectTransform)tab.transform;
         var menu = Dashboard.OpenChartPopupMenu(new Vector2(0f, -kTabHeight), tabRt);
+        menu.m_RectTrans.SetParent(Dashboard.chartContentRt);
 
         var rename = menu.AddMenuButton("重命名".Translate());
         rename.onMenuButtonClick += _ => { Dashboard.CloseChartPopupMenu(); BeginRename(tab); };
@@ -247,6 +250,7 @@ public class PageTabBar
         int target = PageOps.PickPageAfterDelete(charts.dashboardLayout, slot);
         bool deletingCurrent = charts.currentView.pageIndex == slot;
         if (!PageOps.RemovePage(charts, slot)) return;
+        if (_renamingSlot == slot) { _renamingSlot = -1; if (_renameInput != null) _renameInput.gameObject.SetActive(false); }
         if (deletingCurrent && target > 0)
             Dashboard.SetViewPage(target);
         Refresh();
