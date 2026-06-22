@@ -7,3 +7,13 @@
 Completes the in-game Dashboard's unshipped multi-page UI: a top tab bar to
 switch / add / delete / rename pages, plus a "Move to page" entry in each chart's
 right-click menu (vanilla already stored up to 9 pages).
+
+## 截图 / Screenshots
+
+页面标签 + 右键菜单（重命名 / 删除）/ Page tabs with the rename / delete context menu:
+
+![Page tabs and context menu](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/DashboardOverhaul/screenshots/tab-menu.png)
+
+把单个图表移动到其它页面 / Move an individual chart to another page:
+
+![Move chart to page](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/DashboardOverhaul/screenshots/move-to-page.png)
