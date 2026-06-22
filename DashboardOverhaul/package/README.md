@@ -1,19 +1,30 @@
 # DashboardOverhaul
 
-补全 DSP 仪表盘的多页界面：顶部标签栏，支持切换 / 新建 / 删除 / 重命名页面，
-并可在图表右键菜单里把单个图表移动到其它页面。
-原版仪表盘底层已支持最多 9 页并随存档保存，但从未提供切页 UI——本 mod 补上这一前端。
+为游戏内**仪表盘**补全多页界面——顶部标签栏。零额外依赖、不改存档格式、始终生效。
+Adds the missing multi-page UI to the in-game **Dashboard** — a top tab bar. No dependencies, no save-format change, always on.
 
-Completes the in-game Dashboard's unshipped multi-page UI: a top tab bar to
-switch / add / delete / rename pages, plus a "Move to page" entry in each chart's
-right-click menu (vanilla already stored up to 9 pages).
+## 功能 / Features
+
+- 顶部标签栏，最多 9 个页面 / Top tab bar, up to 9 pages
+- 切换 / 新建 / 删除 / 重命名 页面 / Switch · add · delete · rename pages
+- 把单个图表移动到其它页面 / Move an individual chart to another page
+- 页面与页名随存档保存 / Pages & names persist in your save
+
+## 使用 / How to use
+
+- 像往常一样打开仪表盘，标签栏出现在顶部 / Open the Dashboard as usual — the tab bar is at the top
+- **切换页面**：点击标签 / **Switch**: click a tab
+- **新建页面**：点击 `+` / **Add**: click `+`
+- **重命名**：双击标签，或 右键标签 → 重命名 / **Rename**: double-click a tab, or right-click → Rename
+- **删除页面**：右键标签 → 删除（有图表会先确认；至少保留一页）/ **Delete**: right-click a tab → Delete (confirms if it has charts; one page must remain)
+- **移动图表**：右键任意图表 → 移动到页面 → 选目标页 / **Move a chart**: right-click a chart → Move to page → pick a page
 
 ## 截图 / Screenshots
 
-页面标签 + 右键菜单（重命名 / 删除）/ Page tabs with the rename / delete context menu:
+页面标签 + 右键菜单 / Page tabs + context menu:
 
 ![Page tabs and context menu](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/DashboardOverhaul/screenshots/tab-menu.png)
 
-把单个图表移动到其它页面 / Move an individual chart to another page:
+把图表移动到其它页面 / Move a chart to another page:
 
 ![Move chart to page](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/DashboardOverhaul/screenshots/move-to-page.png)
