@@ -51,7 +51,8 @@ public class PageTabBar
     public void Refresh()
     {
         if (_root == null || Dashboard == null) return;
-        foreach (var t in _tabs) if (t != null) Object.Destroy(t.gameObject);
+        for (int c = _root.childCount - 1; c >= 0; c--)
+            Object.Destroy(_root.GetChild(c).gameObject);
         _tabs.Clear();
 
         var charts = Traverse.Create(Dashboard).Field<CustomCharts>("charts").Value;
@@ -64,7 +65,7 @@ public class PageTabBar
             string label = string.IsNullOrEmpty(pages[i].name) ? i.ToString() : pages[i].name;
             _tabs.Add(CreateTab(i, label, i == current));
         }
-        // Task 4 会在此后追加 "+" 按钮
+        CreateAddButton();
     }
 
     private PageTab CreateTab(int slot, string label, bool current)
@@ -104,6 +105,46 @@ public class PageTabBar
         if (Dashboard == null) return;
         Dashboard.SetViewPage(slot); // 原版方法：切页并重排图表
         Refresh();
+    }
+
+    public void AddNewPage()
+    {
+        if (Dashboard == null) return;
+        int slot = PageOps.AddPage(Dashboard.charts);
+        if (slot < 0)
+        {
+            UIRealtimeTip.Popup("已达页面上限".Translate());
+            return;
+        }
+        SwitchTo(slot); // 切到新页并 Refresh
+    }
+
+    private void CreateAddButton()
+    {
+        var go = new GameObject("DO_AddBtn", typeof(RectTransform));
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(_root, false);
+
+        var bg = go.AddComponent<Image>();
+        var c = Dashboard.focusColor;
+        bg.color = new Color(c.r, c.g, c.b, 0.15f);
+
+        var le = go.AddComponent<LayoutElement>();
+        le.minWidth = kTabHeight; // 方形
+        le.preferredHeight = kTabHeight;
+
+        var textGo = new GameObject("Text", typeof(RectTransform));
+        var trt = (RectTransform)textGo.transform;
+        trt.SetParent(rt, false);
+        trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one;
+        trt.offsetMin = Vector2.zero; trt.offsetMax = Vector2.zero;
+        var text = textGo.AddComponent<Text>();
+        text.font = _font; text.fontSize = 18; text.alignment = TextAnchor.MiddleCenter;
+        text.color = Color.white; text.text = "+"; text.raycastTarget = false;
+
+        var btn = go.AddComponent<Button>();
+        btn.targetGraphic = bg;
+        btn.onClick.AddListener(AddNewPage);
     }
 
     // Stubs for future tasks (Task 4+)
