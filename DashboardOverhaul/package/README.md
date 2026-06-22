@@ -30,6 +30,10 @@ A series of enhancements for the in-game **Dashboard**. No extra mod dependencie
 
 ![Page tabs and context menu](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/DashboardOverhaul/screenshots/tab-menu.png)
 
+拖动标签重新排序页面 / Drag a tab to reorder pages:
+
+![Drag page tabs to reorder](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/DashboardOverhaul/screenshots/page-drag-reorder.gif)
+
 把图表移动到其它页面 / Move a chart to another page:
 
 ![Move chart to page](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/DashboardOverhaul/screenshots/move-to-page.png)
