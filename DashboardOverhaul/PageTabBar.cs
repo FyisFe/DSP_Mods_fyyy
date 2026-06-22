@@ -215,6 +215,40 @@ public class PageTabBar
         rename.onMenuButtonClick += _ => { Dashboard.CloseChartPopupMenu(); BeginRename(tab); };
         rename.SetState(true);
 
+        var del = menu.AddMenuButton("删除".Translate());
+        del.onMenuButtonClick += _ => { Dashboard.CloseChartPopupMenu(); DeletePage(tab); };
+        del.SetState(true);
+
         menu.SetState(true);
+    }
+
+    public void DeletePage(PageTab tab)
+    {
+        var charts = Dashboard.charts;
+        if (!PageOps.CanDelete(charts))
+        {
+            UIRealtimeTip.Popup("至少保留一页".Translate());
+            return;
+        }
+        int slot = tab.Slot;
+        var page = charts.dashboardLayout.pages[slot];
+        bool hasCharts = page != null && page.chartDatas != null && page.chartDatas.Count > 0;
+        if (hasCharts)
+            UIMessageBox.Show("删除页面标题".Translate(), "删除页面提示".Translate(),
+                "取消".Translate(), "确定".Translate(), 1,
+                (UIMessageBox.Response)null, new UIMessageBox.Response(() => DoDeletePage(slot)));
+        else
+            DoDeletePage(slot);
+    }
+
+    private void DoDeletePage(int slot)
+    {
+        var charts = Dashboard.charts;
+        int target = PageOps.PickPageAfterDelete(charts.dashboardLayout, slot);
+        bool deletingCurrent = charts.currentView.pageIndex == slot;
+        if (!PageOps.RemovePage(charts, slot)) return;
+        if (deletingCurrent && target > 0)
+            Dashboard.SetViewPage(target);
+        Refresh();
     }
 }
