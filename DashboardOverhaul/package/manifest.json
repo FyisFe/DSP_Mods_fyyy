@@ -3,5 +3,5 @@
   "version_number": "1.0.0",
   "website_url": "",
   "description": "Completes the Dashboard's multi-page UI: switch/add/delete/rename pages",
-  "dependencies": []
+  "dependencies": ["xiaoye97-BepInEx-5.4.17"]
 }

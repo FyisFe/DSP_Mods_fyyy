@@ -16,6 +16,7 @@ public class DashboardOverhaulPlugin : BaseUnityPlugin
         _harmony = new Harmony(PluginInfo.PLUGIN_GUID);
         _harmony.PatchAll(typeof(UIDashboardPatch));
         _harmony.PatchAll(typeof(UIChartPatch));
+        _harmony.PatchAll(typeof(DashboardLayoutPatch));
 
         Logger.LogInfo("DashboardOverhaul loaded.");
     }

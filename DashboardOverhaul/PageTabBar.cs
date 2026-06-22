@@ -15,6 +15,8 @@ public class PageTabBar
 
     private const int kTabHeight = 20;
     private const int kTabMinWidth = 64;
+    private const float kTabMaxWidth = 160f;
+    private const float kTabHPadding = 20f; // 文本左右各 10 的内边距之和
     private const float kBaseLeftMargin = 40f;
     private const float kTopOffset = -4f;
 
@@ -77,16 +79,17 @@ public class PageTabBar
         if (charts == null) return;
         var pages = charts.dashboardLayout.pages;
         int current = charts.currentView.pageIndex;
+        float tabMax = ComputePerTabMax();
         for (int i = 1; i < DashboardLayout.MAX_PAGE_COUNT; i++)
         {
             if (pages[i] == null) continue;
             string label = string.IsNullOrEmpty(pages[i].name) ? i.ToString() : pages[i].name;
-            _tabs.Add(CreateTab(i, label, i == current));
+            _tabs.Add(CreateTab(i, label, i == current, tabMax));
         }
         CreateAddButton();
     }
 
-    private PageTab CreateTab(int slot, string label, bool current)
+    private PageTab CreateTab(int slot, string label, bool current, float maxWidth)
     {
         var go = new GameObject("DO_Tab_" + slot, typeof(RectTransform));
         var rt = (RectTransform)go.transform;
@@ -118,7 +121,46 @@ public class PageTabBar
         tab.Label = text;
         tab.Background = bg;
         tab.Setup(this, slot, label, current);
+        FitTabWidth(text, le, label, maxWidth);
         return tab;
+    }
+
+    /// <summary>Size the tab to its label width (clamped to [min,<paramref name="maxWidth"/>]); ellipsize
+    /// the text past the cap so a long page name can't overflow onto the neighbouring tabs. Vertical
+    /// Overflow is kept (it's what stops the slim bar from blanking the text); only horizontal spill
+    /// is bounded. The cap is per-Refresh and shrinks with page count (see ComputePerTabMax).</summary>
+    private static void FitTabWidth(Text text, LayoutElement le, string label, float maxWidth)
+    {
+        float maxText = maxWidth - kTabHPadding;
+        text.text = label;
+        if (text.preferredWidth > maxText)
+        {
+            string s = label;
+            while (s.Length > 1)
+            {
+                s = s.Substring(0, s.Length - 1);
+                text.text = s + "...";          // 用 ASCII 点，避免游戏字体可能缺省略号字形
+                if (text.preferredWidth <= maxText) break;
+            }
+        }
+        le.preferredWidth = Mathf.Clamp(text.preferredWidth + kTabHPadding, kTabMinWidth, maxWidth);
+    }
+
+    /// <summary>Per-tab width cap = (available width) / MAX_PAGE_COUNT. There are at most 9 page
+    /// tabs, so the spare 1/10 share absorbs the + button and margins and the row always fits; on
+    /// wide screens this is far larger than a fixed cap, so long names use the space instead of
+    /// leaving the bar half-empty. Reads the live dashboard rect and the sidebar offset, so it
+    /// adapts to resolution / aspect; falls back to a sane default if the width isn't laid out yet.</summary>
+    private float ComputePerTabMax()
+    {
+        if (Dashboard == null || Dashboard.rectTrans == null) return kTabMaxWidth;
+        float dashW = Dashboard.rectTrans.rect.width;
+        if (dashW <= 1f) return kTabMaxWidth; // not laid out yet; next Refresh corrects it
+        float sidebar = 0f;
+        var sb = Dashboard.statboardTestRt;
+        if (sb != null) sidebar = Mathf.Max(0f, sb.rect.width + sb.anchoredPosition.x);
+        float per = (dashW - sidebar) / DashboardLayout.MAX_PAGE_COUNT;
+        return Mathf.Max(kTabMinWidth, per);
     }
 
     public void SwitchTo(int slot)
@@ -209,7 +251,7 @@ public class PageTabBar
         var input = go.AddComponent<InputField>();
         input.textComponent = text;
         input.lineType = InputField.LineType.SingleLine;
-        input.characterLimit = 24;
+        input.characterLimit = 64;
         input.onEndEdit.AddListener(CommitRename);
         go.SetActive(false);
         _renameInput = input;
@@ -282,6 +324,7 @@ public class PageTabBar
 
     private void DoDeletePage(int slot)
     {
+        if (Dashboard == null || Dashboard.charts == null) return; // dialog callback may fire after teardown
         var charts = Dashboard.charts;
         int target = PageOps.PickPageAfterDelete(charts.dashboardLayout, slot);
         bool deletingCurrent = charts.currentView.pageIndex == slot;
