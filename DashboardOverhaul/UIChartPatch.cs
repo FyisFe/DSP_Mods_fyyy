@@ -157,4 +157,21 @@ public static class UIChartPatch
             if (dash.statboard != null) dash.statboard.DetermineEntryVisible();
         }
     }
+
+    // Attach the title double-click rename trigger to every chart as it's taken from the pool.
+    // TakeChartFromPool is the single chokepoint where any chart (all types) is shown.
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(UIDashboard), nameof(UIDashboard.TakeChartFromPool))]
+    static void TakeChartFromPool_Postfix(UIChart __result)
+    {
+        if (__result == null || __result.titleText == null) return;
+        var titleGo = __result.titleText.gameObject;
+        var trigger = titleGo.GetComponent<ChartTitleRenameTrigger>();
+        if (trigger == null)
+        {
+            __result.titleText.raycastTarget = true;   // title must receive clicks
+            trigger = titleGo.AddComponent<ChartTitleRenameTrigger>();
+        }
+        trigger.Owner = __result;
+    }
 }
