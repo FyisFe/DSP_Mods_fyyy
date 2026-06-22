@@ -5,7 +5,7 @@
     <TargetFramework>net472</TargetFramework>
     <AssemblyName>DashboardOverhaul</AssemblyName>
     <BepInExPluginGuid>org.fyyy.dashboardoverhaul</BepInExPluginGuid>
-    <Description>Completes the Dashboard's multi-page UI: switch/add/delete/rename pages / 补全仪表盘多页界面：切换/新建/删除/重命名</Description>
+    <Description>A series of enhancements for the in-game Dashboard / 为游戏内仪表盘提供一系列优化</Description>
     <Version>1.1.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>

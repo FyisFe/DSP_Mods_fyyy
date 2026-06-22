@@ -1,7 +1,7 @@
 # DashboardOverhaul
 
-为游戏内**仪表盘**补全缺失的界面：顶部多页标签栏，以及直接在图表上重命名 / 删除统计项。零额外依赖、不改存档格式、始终生效。
-Completes the in-game **Dashboard**'s missing UI: a top multi-page tab bar, plus renaming / deleting a chart's statistic right from the chart. No extra mod dependencies (BepInEx only), no save-format change, always on.
+为游戏内**仪表盘**提供一系列优化与改进。零额外依赖、不改存档格式、始终生效。
+A series of enhancements for the in-game **Dashboard**. No extra mod dependencies (BepInEx only), no save-format change, always on.
 
 ## 功能 / Features
 
