@@ -8,4 +8,16 @@ package/*.zip
 **/package/*.zip
 GameCode-latest
 XianTuEnhanced/
-docs/
+.superpowers/
+
+# Design/plan docs for mods not published to the public repo (kept local only)
+# XianTuEnhanced (and its window-position-lock feature)
+docs/superpowers/specs/2026-03-22-xiantu-enhanced-design.md
+docs/superpowers/plans/2026-03-22-xiantu-enhanced.md
+docs/superpowers/specs/2026-03-22-lock-window-position-design.md
+docs/superpowers/plans/2026-03-22-lock-window-position-plan.md
+# DeliveryPresets
+docs/superpowers/specs/2026-05-09-delivery-presets-design.md
+# RayReceiverOptimization (gamma-receiver parallel)
+docs/superpowers/specs/2026-04-06-gamma-receiver-parallel-design.md
+docs/superpowers/plans/2026-04-06-ray-receiver-optimization-plan.md
