@@ -93,6 +93,7 @@ public static class PageOps
     {
         var pages = charts?.dashboardLayout?.pages;
         if (pages == null || newOrder == null) return;
+        if (newOrder.Count >= DashboardLayout.MAX_PAGE_COUNT) return; // would overflow slots 1..9 (upstream already bounds this; explicit here)
 
         // Validate that newOrder is a permutation of the current non-null pages.
         int active = ActivePageCount(charts);

@@ -18,6 +18,7 @@ public class PageTabBar
     private RectTransform _placeholder;
     private float _dragFixedY;
     private float _dragZ;
+    private int _dragInsertIndex = -1; // last placeholder insert index; skips redundant reflow when unchanged
 
     private const int kTabHeight = 20;
     private const int kTabMinWidth = 64;
@@ -364,6 +365,7 @@ public class PageTabBar
         }
 
         _draggingTab = tab;
+        _dragInsertIndex = -1; // force the first reflow frame to apply
         var rt = (RectTransform)tab.transform;
 
         // Capture the tab's current center world position so lifting it doesn't visually jump.
@@ -452,29 +454,36 @@ public class PageTabBar
     {
         if (_placeholder == null) return;
 
-        var realTabs = new List<RectTransform>();
+        // Insert index = how many non-dragged tab centers are left of the cursor. Counted inline
+        // (no list alloc) so we can bail before the reorder when the index hasn't changed.
+        int target = 0, realCount = 0;
+        var c = new Vector3[4];
         for (int i = 0; i < _root.childCount; i++)
         {
             var child = _root.GetChild(i);
             var pt = child.GetComponent<PageTab>();
-            if (pt != null && pt != _draggingTab) realTabs.Add((RectTransform)child);
-        }
-
-        int target = 0;
-        var c = new Vector3[4];
-        foreach (var r in realTabs)
-        {
-            r.GetWorldCorners(c);
+            if (pt == null || pt == _draggingTab) continue;
+            realCount++;
+            ((RectTransform)child).GetWorldCorners(c);
             float cx = (c[0].x + c[2].x) * 0.5f;
             if (cx < cursorWorldX) target++;
         }
-        if (target > realTabs.Count) target = realTabs.Count;
+        if (target > realCount) target = realCount;
+        if (target == _dragInsertIndex) return; // placeholder already here; nothing to reflow
+        _dragInsertIndex = target;
 
-        var ordered = new List<Transform>(realTabs.Count + 2);
-        foreach (var r in realTabs) ordered.Add(r);
+        // Rebuild child order: real tabs with the placeholder at the new index, + button last,
+        // dragged tab on top.
+        var ordered = new List<Transform>(realCount + 2);
+        for (int i = 0; i < _root.childCount; i++)
+        {
+            var child = _root.GetChild(i);
+            var pt = child.GetComponent<PageTab>();
+            if (pt != null && pt != _draggingTab) ordered.Add(child);
+        }
         ordered.Insert(target, _placeholder);
         if (_addButton != null) ordered.Add(_addButton);
-        ordered.Add((RectTransform)_draggingTab.transform);
+        ordered.Add(_draggingTab.transform);
         for (int i = 0; i < ordered.Count; i++) ordered[i].SetSiblingIndex(i);
     }
 
@@ -482,5 +491,6 @@ public class PageTabBar
     {
         _placeholder = null;   // destroyed by Refresh's child sweep
         _draggingTab = null;
+        _dragInsertIndex = -1;
     }
 }
