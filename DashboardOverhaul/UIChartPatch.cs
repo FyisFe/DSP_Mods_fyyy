@@ -169,7 +169,10 @@ public static class UIChartPatch
         var trigger = titleGo.GetComponent<ChartTitleRenameTrigger>();
         if (trigger == null)
         {
-            __result.titleText.raycastTarget = true;   // title must receive clicks
+            // Title must receive clicks. Intentionally left true permanently: vanilla never reads
+            // titleText.raycastTarget, pooling only deactivates the chart subtree, and the trigger
+            // needs it true. Do NOT "reset on recycle" -- that would break the title click target.
+            __result.titleText.raycastTarget = true;
             trigger = titleGo.AddComponent<ChartTitleRenameTrigger>();
         }
         trigger.Owner = __result;
