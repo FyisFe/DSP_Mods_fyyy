@@ -137,6 +137,9 @@ public static class UIChartPatch
         int id = chart.chartData.statPlanId;
         if (dash != null) dash.CloseChartPopupMenu();
         ChartRename.CancelIfTargeting(chart);
+        // These four are the game's OWN localization keys (the sidebar's UIStatPlanEntry
+        // delete-statistic dialog), so .Translate() resolves them on every client for free.
+        // Do NOT convert to Loc.L -- that would drop the game's coverage of non-zh/en locales.
         UIMessageBox.Show(
             "确认删除统计项标题".Translate(),
             "确认删除统计项提示".Translate(),
