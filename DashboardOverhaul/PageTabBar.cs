@@ -452,12 +452,23 @@ public class PageTabBar
     /// aside to preview the drop. The + button stays last; the dragged tab stays on top.</summary>
     private void ReflowPlaceholder(float cursorWorldX)
     {
-        if (_placeholder == null) return;
+        if (_placeholder == null || _root == null) return;
 
-        // Insert index = how many non-dragged tab centers are left of the cursor. Counted inline
-        // (no list alloc) so we can bail before the reorder when the index hasn't changed.
+        // Layout metrics for reconstructing resting (placeholder-independent) positions.
+        float scale = _root.lossyScale.x;
+        float spacing = 0f, padLeft = 0f;
+        var hlg = _root.GetComponent<HorizontalLayoutGroup>();
+        if (hlg != null) { spacing = hlg.spacing; padLeft = hlg.padding.left; }
+        var barCorners = new Vector3[4];
+        _root.GetWorldCorners(barCorners);
+
+        // Pack the non-dragged tabs left-to-right at their RESTING positions (as if the placeholder
+        // weren't there) and count how many resting centers sit left of the cursor. Using resting
+        // (not live) centers means moving the placeholder never shifts the decision -> the target slot
+        // stays stable and predictable even when a long-title tab makes the placeholder very wide.
         int target = 0, realCount = 0;
         var c = new Vector3[4];
+        float x = barCorners[0].x + padLeft * scale; // resting left edge of the first tab (world)
         for (int i = 0; i < _root.childCount; i++)
         {
             var child = _root.GetChild(i);
@@ -465,8 +476,9 @@ public class PageTabBar
             if (pt == null || pt == _draggingTab) continue;
             realCount++;
             ((RectTransform)child).GetWorldCorners(c);
-            float cx = (c[0].x + c[2].x) * 0.5f;
-            if (cx < cursorWorldX) target++;
+            float w = c[2].x - c[0].x;                // stable world width (placeholder shifts position, not width)
+            if (x + w * 0.5f < cursorWorldX) target++;
+            x += w + spacing * scale;
         }
         if (target > realCount) target = realCount;
         if (target == _dragInsertIndex) return; // placeholder already here; nothing to reflow
