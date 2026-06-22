@@ -18,7 +18,7 @@ public static class ChartRename
     /// current StatPlan name.</summary>
     public static void Begin(UIChart chart)
     {
-        if (chart == null || chart.chartData == null || chart.charts == null) return;
+        if (chart == null) return; // chartData/charts null are covered by the ResolveStatPlan null-return below
         var dash = chart.uiDashboard;
         if (dash == null || dash.chartContentRt == null) return;
         var statPlan = ResolveStatPlan(chart);
@@ -148,7 +148,11 @@ public static class ChartRename
 
     private static void Hide()
     {
-        if (_input != null) _input.gameObject.SetActive(false);
+        // Clear the target before deactivating: deactivating a focused InputField fires onEndEdit
+        // synchronously, so a re-entrant Commit must see a null target — otherwise a cancel (e.g.
+        // CancelIfTargeting just before a delete) would implicitly commit the pending text. Mirrors
+        // PageTabBar, which clears its rename guard before SetActive(false).
         _target = null;
+        if (_input != null) _input.gameObject.SetActive(false);
     }
 }
