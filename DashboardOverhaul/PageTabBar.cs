@@ -11,6 +11,8 @@ public class PageTabBar
     private RectTransform _root;
     private Font _font;
     private readonly List<PageTab> _tabs = new();
+    private InputField _renameInput;
+    private int _renamingSlot = -1;
 
     private const int kTabHeight = 26;
     private const int kTabMinWidth = 64;
@@ -44,6 +46,8 @@ public class PageTabBar
     {
         if (_root != null) Object.Destroy(_root.gameObject);
         _root = null;
+        _renameInput = null;
+        _renamingSlot = -1;
         _tabs.Clear();
         Dashboard = null;
     }
@@ -147,7 +151,71 @@ public class PageTabBar
         btn.onClick.AddListener(AddNewPage);
     }
 
-    // Stubs for future tasks (Task 4+)
-    public void OpenContextMenu(PageTab tab) { }
-    public void BeginRename(PageTab tab) { }
+    private InputField EnsureRenameInput()
+    {
+        if (_renameInput != null) return _renameInput;
+        var go = new GameObject("DO_RenameInput", typeof(RectTransform));
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(_root.parent, false); // 挂在标签栏的父级，浮在标签之上
+        rt.sizeDelta = new Vector2(120f, kTabHeight);
+
+        var bg = go.AddComponent<Image>();
+        bg.color = new Color(0f, 0f, 0f, 0.85f);
+
+        var textGo = new GameObject("Text", typeof(RectTransform));
+        var trt = (RectTransform)textGo.transform;
+        trt.SetParent(rt, false);
+        trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one;
+        trt.offsetMin = new Vector2(6f, 0f); trt.offsetMax = new Vector2(-6f, 0f);
+        var text = textGo.AddComponent<Text>();
+        text.font = _font; text.fontSize = 14; text.alignment = TextAnchor.MiddleLeft;
+        text.color = Color.white; text.supportRichText = false;
+
+        var input = go.AddComponent<InputField>();
+        input.textComponent = text;
+        input.lineType = InputField.LineType.SingleLine;
+        input.characterLimit = 24;
+        input.onEndEdit.AddListener(CommitRename);
+        go.SetActive(false);
+        _renameInput = input;
+        return input;
+    }
+
+    public void BeginRename(PageTab tab)
+    {
+        var input = EnsureRenameInput();
+        _renamingSlot = tab.Slot;
+        var page = Dashboard.charts.dashboardLayout.pages[tab.Slot];
+        input.gameObject.SetActive(true);
+        // 定位到被改标签的位置
+        var inputRt = (RectTransform)input.transform;
+        var tabRt = (RectTransform)tab.transform;
+        inputRt.position = tabRt.position;
+        inputRt.sizeDelta = new Vector2(Mathf.Max(120f, tabRt.rect.width), kTabHeight);
+        input.text = page != null ? (page.name ?? string.Empty) : string.Empty;
+        input.Select();
+        input.ActivateInputField();
+    }
+
+    private void CommitRename(string value)
+    {
+        if (_renamingSlot < 0) return;
+        var page = Dashboard.charts.dashboardLayout.pages[_renamingSlot];
+        PageOps.RenamePage(page, value);
+        _renamingSlot = -1;
+        if (_renameInput != null) _renameInput.gameObject.SetActive(false);
+        Refresh();
+    }
+
+    public void OpenContextMenu(PageTab tab)
+    {
+        var tabRt = (RectTransform)tab.transform;
+        var menu = Dashboard.OpenChartPopupMenu(new Vector2(0f, -kTabHeight), tabRt);
+
+        var rename = menu.AddMenuButton("重命名".Translate());
+        rename.onMenuButtonClick += _ => { Dashboard.CloseChartPopupMenu(); BeginRename(tab); };
+        rename.SetState(true);
+
+        menu.SetState(true);
+    }
 }
