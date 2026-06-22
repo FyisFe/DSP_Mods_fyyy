@@ -4,8 +4,11 @@ using UnityEngine.UI;
 
 namespace DashboardOverhaul;
 
-/// <summary>A single page tab button. Left-click switches page; double-click renames; right-click opens the menu -- all handled by PageTabBar.</summary>
-public class PageTab : MonoBehaviour, IPointerClickHandler
+/// <summary>A single page tab button. Left-click switches page; double-click renames; right-click
+/// opens the menu; dragging reorders -- all handled by PageTabBar. Unity only promotes a press to a
+/// drag past EventSystem.pixelDragThreshold, and a drag suppresses the click, so the click gestures
+/// are unaffected.</summary>
+public class PageTab : MonoBehaviour, IPointerClickHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     public int Slot;
     private PageTabBar _bar;
@@ -36,5 +39,20 @@ public class PageTab : MonoBehaviour, IPointerClickHandler
             _bar.BeginRename(this);
         else
             _bar.SwitchTo(Slot);
+    }
+
+    public void OnBeginDrag(PointerEventData eventData)
+    {
+        if (_bar != null) _bar.BeginDrag(this, eventData);
+    }
+
+    public void OnDrag(PointerEventData eventData)
+    {
+        if (_bar != null) _bar.Drag(this, eventData);
+    }
+
+    public void OnEndDrag(PointerEventData eventData)
+    {
+        if (_bar != null) _bar.EndDrag(this, eventData);
     }
 }

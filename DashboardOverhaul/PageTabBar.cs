@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace DashboardOverhaul;
@@ -12,6 +13,11 @@ public class PageTabBar
     private readonly List<PageTab> _tabs = new();
     private InputField _renameInput;
     private int _renamingSlot = -1;
+    private RectTransform _addButton;
+    private PageTab _draggingTab;
+    private RectTransform _placeholder;
+    private float _dragFixedY;
+    private float _dragZ;
 
     private const int kTabHeight = 20;
     private const int kTabMinWidth = 64;
@@ -52,6 +58,9 @@ public class PageTabBar
         _root = null;
         _renameInput = null;
         _renamingSlot = -1;
+        _addButton = null;
+        _placeholder = null;
+        _draggingTab = null;
         _tabs.Clear();
         Dashboard = null;
     }
@@ -196,6 +205,7 @@ public class PageTabBar
         var go = new GameObject("DO_AddBtn", typeof(RectTransform));
         var rt = (RectTransform)go.transform;
         rt.SetParent(_root, false);
+        _addButton = rt;
 
         var bg = go.AddComponent<Image>();
         var c = Dashboard.focusColor;
@@ -333,5 +343,144 @@ public class PageTabBar
         if (deletingCurrent && target > 0)
             Dashboard.SetViewPage(target);
         Refresh();
+    }
+
+    /// <summary>Begin reordering: lift the dragged tab out of the layout, hold its gap with an
+    /// equal-width placeholder, and raise it above its siblings so it can follow the cursor. No-op
+    /// with fewer than two pages.</summary>
+    public void BeginDrag(PageTab tab, PointerEventData eventData)
+    {
+        if (_root == null || Dashboard == null || tab == null) return;
+
+        int tabCount = 0;
+        foreach (var t in _tabs) if (t != null) tabCount++;
+        if (tabCount < 2) return;   // nothing to reorder
+
+        // A drag invalidates any in-progress rename (its slot is about to be reassigned).
+        if (_renamingSlot >= 0)
+        {
+            _renamingSlot = -1;
+            if (_renameInput != null) _renameInput.gameObject.SetActive(false);
+        }
+
+        _draggingTab = tab;
+        var rt = (RectTransform)tab.transform;
+
+        // Capture the tab's current center world position so lifting it doesn't visually jump.
+        var corners = new Vector3[4];
+        rt.GetWorldCorners(corners);                 // 0=BL 1=TL 2=TR 3=BR
+        Vector3 center = (corners[0] + corners[2]) * 0.5f;
+        _dragFixedY = center.y;
+        _dragZ = rt.position.z;
+        float width = rt.rect.width;
+
+        // Equal-width placeholder at the tab's slot keeps the row width and other tabs in place.
+        _placeholder = CreatePlaceholder(width);
+        _placeholder.SetSiblingIndex(rt.GetSiblingIndex());
+
+        // Lift out of layout control; center pivot so it tracks the cursor by its middle.
+        var le = tab.GetComponent<LayoutElement>();
+        if (le != null) le.ignoreLayout = true;
+        if (tab.Background != null) tab.Background.raycastTarget = false;
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.position = center;                         // keep visually in place at grab
+        rt.SetAsLastSibling();                        // render on top
+    }
+
+    /// <summary>While dragging: move the lifted tab to the cursor's x (clamped to the bar) and slide
+    /// the other tabs by repositioning the placeholder.</summary>
+    public void Drag(PageTab tab, PointerEventData eventData)
+    {
+        if (_draggingTab != tab || _root == null) return;
+        if (!RectTransformUtility.ScreenPointToWorldPointInRectangle(
+                _root, eventData.position, eventData.pressEventCamera, out Vector3 world))
+            return;
+
+        var rt = (RectTransform)tab.transform;
+        var barCorners = new Vector3[4];
+        _root.GetWorldCorners(barCorners);
+        float x = Mathf.Clamp(world.x, barCorners[0].x, barCorners[2].x);
+        rt.position = new Vector3(x, _dragFixedY, _dragZ);
+
+        ReflowPlaceholder(world.x);
+    }
+
+    /// <summary>Drop: derive the new page order from the current child order (placeholder marks the
+    /// dragged page's new position), commit it, and rebuild the tab bar.</summary>
+    public void EndDrag(PageTab tab, PointerEventData eventData)
+    {
+        if (_draggingTab != tab) return;
+        if (Dashboard == null || Dashboard.charts == null) { CleanupDrag(); Refresh(); return; }
+
+        var layout = Dashboard.charts.dashboardLayout;
+        var newOrder = new List<DashboardPage>();
+        for (int i = 0; i < _root.childCount; i++)
+        {
+            var child = _root.GetChild(i);
+            if (child == _placeholder)
+            {
+                var dragged = layout.pages[_draggingTab.Slot];
+                if (dragged != null) newOrder.Add(dragged);
+                continue;
+            }
+            var pt = child.GetComponent<PageTab>();
+            if (pt == null || pt == _draggingTab) continue;   // skip the + button and the lifted tab
+            var page = layout.pages[pt.Slot];
+            if (page != null) newOrder.Add(page);
+        }
+
+        PageOps.ReorderPages(Dashboard.charts, newOrder);
+        CleanupDrag();
+        Refresh();   // rebuilds tabs from the new slots; destroys placeholder + lifted tab
+    }
+
+    private RectTransform CreatePlaceholder(float width)
+    {
+        var go = new GameObject("DO_DragPlaceholder", typeof(RectTransform));
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(_root, false);
+        var le = go.AddComponent<LayoutElement>();
+        le.preferredWidth = width;
+        le.minWidth = width;
+        le.preferredHeight = kTabHeight;
+        return rt;
+    }
+
+    /// <summary>Position the placeholder among the non-dragged tabs by cursor x, so the others slide
+    /// aside to preview the drop. The + button stays last; the dragged tab stays on top.</summary>
+    private void ReflowPlaceholder(float cursorWorldX)
+    {
+        if (_placeholder == null) return;
+
+        var realTabs = new List<RectTransform>();
+        for (int i = 0; i < _root.childCount; i++)
+        {
+            var child = _root.GetChild(i);
+            var pt = child.GetComponent<PageTab>();
+            if (pt != null && pt != _draggingTab) realTabs.Add((RectTransform)child);
+        }
+
+        int target = 0;
+        var c = new Vector3[4];
+        foreach (var r in realTabs)
+        {
+            r.GetWorldCorners(c);
+            float cx = (c[0].x + c[2].x) * 0.5f;
+            if (cx < cursorWorldX) target++;
+        }
+        if (target > realTabs.Count) target = realTabs.Count;
+
+        var ordered = new List<Transform>(realTabs.Count + 2);
+        foreach (var r in realTabs) ordered.Add(r);
+        ordered.Insert(target, _placeholder);
+        if (_addButton != null) ordered.Add(_addButton);
+        ordered.Add((RectTransform)_draggingTab.transform);
+        for (int i = 0; i < ordered.Count; i++) ordered[i].SetSiblingIndex(i);
+    }
+
+    private void CleanupDrag()
+    {
+        _placeholder = null;   // destroyed by Refresh's child sweep
+        _draggingTab = null;
     }
 }
