@@ -55,6 +55,7 @@ public class PageTabBar
         _tabs.Clear();
 
         var charts = Traverse.Create(Dashboard).Field<CustomCharts>("charts").Value;
+        if (charts == null) return;
         var pages = charts.dashboardLayout.pages;
         int current = charts.currentView.pageIndex;
         for (int i = 1; i < DashboardLayout.MAX_PAGE_COUNT; i++)
