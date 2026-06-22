@@ -27,10 +27,28 @@ public static class ChartRename
         var input = EnsureInput(dash);
         _target = chart;
 
+        // Overlay the chart title's actual on-screen rectangle: pivot top-left, placed at the
+        // title's top-left world corner, sized to the title's width. (Setting position to the
+        // title's pivot — its centre — with a centre-pivot, fixed-width box misplaced it, since
+        // the title is a wide, centre-pivoted element.)
         var inputRt = (RectTransform)input.transform;
-        var anchorRt = chart.titleText != null ? (RectTransform)chart.titleText.transform : chart.rectTrans;
-        inputRt.position = anchorRt.position;
-        inputRt.sizeDelta = new Vector2(Mathf.Max(140f, anchorRt.rect.width), 22f);
+        var titleRt = chart.titleText != null ? chart.titleText.rectTransform : chart.rectTrans;
+        var parent = inputRt.parent as RectTransform;
+        var corners = new Vector3[4];
+        titleRt.GetWorldCorners(corners); // 0=BL, 1=TL, 2=TR, 3=BR
+        float width = 140f, height = 22f;
+        if (parent != null)
+        {
+            Vector3 tl = parent.InverseTransformPoint(corners[1]);
+            Vector3 tr = parent.InverseTransformPoint(corners[2]);
+            Vector3 bl = parent.InverseTransformPoint(corners[0]);
+            width = Mathf.Max(140f, Mathf.Abs(tr.x - tl.x));
+            height = Mathf.Max(20f, Mathf.Abs(tl.y - bl.y));
+        }
+        inputRt.anchorMin = inputRt.anchorMax = new Vector2(0f, 1f);
+        inputRt.pivot = new Vector2(0f, 1f);
+        inputRt.sizeDelta = new Vector2(width, height);
+        inputRt.position = corners[1];
 
         input.gameObject.SetActive(true);
         input.text = statPlan.name ?? string.Empty;
@@ -105,11 +123,27 @@ public static class ChartRename
         var statPlan = ResolveStatPlan(chart);
         if (statPlan == null) return;
         string newName = (value ?? string.Empty).Trim();
-        statPlan.Rename(ref newName);                 // fires onNameChanged -> title repaints
+        statPlan.Rename(ref newName);                 // fires onNameChanged -> chart title repaints
         chart.TruncateStatPlanNameText();             // defensive title refresh
-        var dash = chart.uiDashboard;
-        if (dash != null && dash.statboard != null)
-            dash.statboard.DetermineEntryVisible();    // refresh the sidebar list if present
+        RefreshSidebarName(chart.uiDashboard, statPlan); // sync the sidebar entry's displayed name
+    }
+
+    /// <summary>Update the sidebar entry's displayed name after a rename. DetermineEntryVisible does
+    /// NOT do this for an already-visible entry: ResetTarget early-returns on an unchanged id and
+    /// _Open() no-ops when the entry is already open, so the entry's nameInput keeps its old text.
+    /// We set it directly, mirroring UIStatPlanEntry._OnOpen (nameInput.text = name, or null -> the
+    /// "#id default-name" placeholder shows).</summary>
+    private static void RefreshSidebarName(UIDashboard dash, StatPlan statPlan)
+    {
+        var statboard = dash != null ? dash.statboard : null;
+        if (statboard == null || statboard.objectEntryPool == null || statPlan == null) return;
+        var pool = statboard.objectEntryPool;
+        for (int i = 0; i < pool.Count; i++)
+        {
+            var e = pool[i];
+            if (e != null && e.statPlan != null && e.statPlan.id == statPlan.id && e.nameInput != null)
+                e.nameInput.text = string.IsNullOrEmpty(statPlan.name) ? null : statPlan.name;
+        }
     }
 
     private static void Hide()
