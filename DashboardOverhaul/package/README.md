@@ -9,6 +9,7 @@ Adds the missing multi-page UI to the in-game **Dashboard** — a top tab bar. N
 - 切换 / 新建 / 删除 / 重命名 页面 / Switch · add · delete · rename pages
 - 把单个图表移动到其它页面 / Move an individual chart to another page
 - 页面与页名随存档保存 / Pages & names persist in your save
+- 重命名 / 删除 单个图表的统计项（图表右键菜单，或双击标题重命名）/ Rename · delete a chart's statistic (chart right-click menu, or double-click the title to rename)
 
 ## 使用 / How to use
 
@@ -18,6 +19,8 @@ Adds the missing multi-page UI to the in-game **Dashboard** — a top tab bar. N
 - **重命名**：双击标签，或 右键标签 → 重命名 / **Rename**: double-click a tab, or right-click → Rename
 - **删除页面**：右键标签 → 删除（有图表会先确认；至少保留一页）/ **Delete**: right-click a tab → Delete (confirms if it has charts; one page must remain)
 - **移动图表**：右键任意图表 → 移动到页面 → 选目标页 / **Move a chart**: right-click a chart → Move to page → pick a page
+- **重命名图表**：右键图表 → 重命名，或双击图表标题 / **Rename a chart**: right-click → Rename, or double-click the chart title
+- **删除统计项**：右键图表 → 删除统计项（会移除该统计项在所有页面的图表，有确认）/ **Delete statistic**: right-click → Delete statistic (removes that statistic's charts on every page; confirms first)
 
 ## 截图 / Screenshots
 

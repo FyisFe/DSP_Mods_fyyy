@@ -3,6 +3,15 @@
 All notable changes to DashboardOverhaul are documented here.
 本文件记录 DashboardOverhaul 的版本变更。
 
+## [1.1.0] - 2026-06-22
+
+图表统计项管理 / Chart statistic management.
+
+### 新增 / Added
+
+- 重命名单个图表的统计项，从图表右键菜单或双击标题 / Rename a chart's statistic from the chart right-click menu or by double-clicking its title
+- 删除统计项，从图表右键菜单（会移除该统计项在所有页面的图表，有确认）/ Delete a statistic from the chart menu (removes that statistic's charts on all pages; confirms first)
+
 ## [1.0.0] - 2026-06-21
 
 首个发布版 / Initial release.

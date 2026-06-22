@@ -6,7 +6,7 @@
     <AssemblyName>DashboardOverhaul</AssemblyName>
     <BepInExPluginGuid>org.fyyy.dashboardoverhaul</BepInExPluginGuid>
     <Description>Completes the Dashboard's multi-page UI: switch/add/delete/rename pages / 补全仪表盘多页界面：切换/新建/删除/重命名</Description>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>https://nuget.bepinex.dev/v3/index.json</RestoreAdditionalProjectSources>
