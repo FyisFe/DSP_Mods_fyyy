@@ -16,7 +16,7 @@ public class PageTabBar
     private const int kTabHeight = 20;
     private const int kTabMinWidth = 64;
     private const float kTabMaxWidth = 160f;
-    private const float kTabHPadding = 20f; // 文本左右各 10 的内边距之和
+    private const float kTabHPadding = 20f; // sum of 10px left + 10px right text padding
     private const float kBaseLeftMargin = 40f;
     private const float kTopOffset = -4f;
 
@@ -29,7 +29,7 @@ public class PageTabBar
         var go = new GameObject("DO_PageTabBar", typeof(RectTransform));
         _root = (RectTransform)go.transform;
         _root.SetParent(dashboard.rectTrans, false);
-        // 顶部横排，左上锚点
+        // top horizontal row, anchored top-left
         _root.anchorMin = new Vector2(0f, 1f);
         _root.anchorMax = new Vector2(0f, 1f);
         _root.pivot = new Vector2(0f, 1f);
@@ -113,7 +113,7 @@ public class PageTabBar
         text.alignment = TextAnchor.MiddleCenter;
         text.color = Color.white;
         text.raycastTarget = false;
-        // 矮条带下字体行高可能超过文本框 → 默认会被截断为空白；用 Overflow 保证始终渲染
+        // in the slim bar the font line height can exceed the text box -> default clipping blanks it; Overflow keeps it always rendered
         text.horizontalOverflow = HorizontalWrapMode.Overflow;
         text.verticalOverflow = VerticalWrapMode.Overflow;
 
@@ -139,7 +139,7 @@ public class PageTabBar
             while (s.Length > 1)
             {
                 s = s.Substring(0, s.Length - 1);
-                text.text = s + "...";          // 用 ASCII 点，避免游戏字体可能缺省略号字形
+                text.text = s + "...";          // ASCII dots, in case the game font lacks an ellipsis glyph
                 if (text.preferredWidth <= maxText) break;
             }
         }
@@ -166,8 +166,8 @@ public class PageTabBar
     public void SwitchTo(int slot)
     {
         if (Dashboard == null) return;
-        Dashboard.SetViewPage(slot);  // 原版方法：切页并重排图表
-        UpdateHighlights();           // 只更新高亮，不重建标签（重建会打断双击重命名）
+        Dashboard.SetViewPage(slot);  // vanilla method: switches page and re-lays out charts
+        UpdateHighlights();           // only update highlights, don't rebuild tabs (rebuilding would interrupt double-click rename)
     }
 
     private void UpdateHighlights()
@@ -188,7 +188,7 @@ public class PageTabBar
             return;
         }
         Dashboard.SetViewPage(slot);
-        Refresh(); // 页集合变化，需重建标签
+        Refresh(); // page set changed, rebuild tabs
     }
 
     private void CreateAddButton()
@@ -202,10 +202,10 @@ public class PageTabBar
         bg.color = new Color(c.r, c.g, c.b, 0.15f);
 
         var le = go.AddComponent<LayoutElement>();
-        le.minWidth = kTabHeight; // 方形
+        le.minWidth = kTabHeight; // square
         le.preferredHeight = kTabHeight;
 
-        // 用两条白色 Image 拼出 "+"，避免依赖游戏字体是否包含 '+' 字形（部分字体不渲染）
+        // build the "+" from two white Images, to avoid depending on whether the game font has a '+' glyph (some fonts don't render it)
         AddPlusBar(rt, 12f, 2f);
         AddPlusBar(rt, 2f, 12f);
 
@@ -232,7 +232,7 @@ public class PageTabBar
         if (_renameInput != null) return _renameInput;
         var go = new GameObject("DO_RenameInput", typeof(RectTransform));
         var rt = (RectTransform)go.transform;
-        rt.SetParent(_root.parent, false); // 挂在标签栏的父级，浮在标签之上
+        rt.SetParent(_root.parent, false); // parent to the tab bar's parent, floating above the tabs
         rt.sizeDelta = new Vector2(120f, kTabHeight);
 
         var bg = go.AddComponent<Image>();
@@ -265,7 +265,7 @@ public class PageTabBar
         _renamingSlot = tab.Slot;
         var page = Dashboard.charts.dashboardLayout.pages[tab.Slot];
         input.gameObject.SetActive(true);
-        // 定位到被改标签的位置
+        // position over the tab being renamed
         var inputRt = (RectTransform)input.transform;
         var tabRt = (RectTransform)tab.transform;
         inputRt.position = tabRt.position;

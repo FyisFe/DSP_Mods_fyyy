@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 namespace DashboardOverhaul;
 
-/// <summary>一个页面标签按钮。左键切页 / 双击重命名 / 右键弹菜单 由 PageTabBar 处理。</summary>
+/// <summary>A single page tab button. Left-click switches page; double-click renames; right-click opens the menu -- all handled by PageTabBar.</summary>
 public class PageTab : MonoBehaviour, IPointerClickHandler
 {
     public int Slot;

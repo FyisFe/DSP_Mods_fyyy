@@ -18,10 +18,12 @@ public static class UIDashboardPatch
     [HarmonyPatch(typeof(UIDashboard), "_OnOpen")]
     static void OnOpen_Postfix(UIDashboard __instance)
     {
-        // 防御：若存档里的 currentView.pageIndex 指向已删除/越界的页槽（外部改档、
-        // 旧版本或未来回归都可能造成），原版 CustomCharts.PrepareTick 会无判空地
-        // 解引用 pages[pageIndex]，且它运行在模拟循环里、不在 UI 的 try/catch 内 ——
-        // 这会硬崩游戏。开窗时把无效的当前页指回首个有效页即可彻底规避。
+        // Defense-in-depth: if a save's currentView.pageIndex points at a deleted/
+        // out-of-range slot (possible via external save edits, an older mod version,
+        // or a future regression), vanilla CustomCharts.PrepareTick dereferences
+        // pages[pageIndex] with no null check, and it runs in the sim loop outside
+        // the UI try/catch -- a hard crash. Repointing an invalid current page to the
+        // first active page on open avoids it entirely.
         if (__instance != null && !PageOps.IsValidViewPage(__instance.charts))
         {
             int target = PageOps.FirstActiveSlot(__instance.charts?.dashboardLayout);

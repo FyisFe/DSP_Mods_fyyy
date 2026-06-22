@@ -1,8 +1,8 @@
 namespace DashboardOverhaul;
 
 /// <summary>
-/// 仪表盘分页的纯逻辑层：只操作数据结构，不触碰任何 Unity UI。
-/// 页索引域 1..9（pages[0] 永不使用）。删除采用"置空槽、不移位"。
+/// Pure logic layer for dashboard paging: operates only on data structures, never touches Unity UI.
+/// Page index domain is 1..9 (pages[0] is never used). Deletion nulls the slot in place (no shifting).
 /// </summary>
 public static class PageOps
 {
@@ -23,7 +23,7 @@ public static class PageOps
         return -1;
     }
 
-    /// <summary>第一个非空槽（1..9），没有返回 -1。用于把无效的当前页指回有效页。</summary>
+    /// <summary>First non-null slot (1..9), or -1 if none. Used to repoint an invalid current page back to a valid one.</summary>
     public static int FirstActiveSlot(DashboardLayout layout)
     {
         var pages = layout?.pages;
@@ -33,7 +33,7 @@ public static class PageOps
         return -1;
     }
 
-    /// <summary>currentView.pageIndex 是否指向一个有效的非空页（1..9）。</summary>
+    /// <summary>Whether currentView.pageIndex points at a valid non-null page (1..9).</summary>
     public static bool IsValidViewPage(CustomCharts charts)
     {
         var pages = charts?.dashboardLayout?.pages;
@@ -42,19 +42,19 @@ public static class PageOps
         return cur >= 1 && cur < DashboardLayout.MAX_PAGE_COUNT && pages[cur] != null;
     }
 
-    /// <summary>占用最小空槽并初始化一页；返回新页槽号，满则 -1。</summary>
+    /// <summary>Claims the lowest free slot and initializes a page; returns the new slot, or -1 if full.</summary>
     public static int AddPage(CustomCharts charts)
     {
         var layout = charts.dashboardLayout;
         int slot = FirstFreeSlot(layout);
         if (slot < 0) return -1;
-        layout.AddPage(slot); // 原版 AddPage：new DashboardPage().Init()，name = slot.ToString()
+        layout.AddPage(slot); // vanilla AddPage: new DashboardPage().Init(), name = slot.ToString()
         return slot;
     }
 
     public static bool CanDelete(CustomCharts charts) => ActivePageCount(charts) > 1;
 
-    /// <summary>删 deletedIndex 后应跳向的槽：先向小页号找，再向大页号找；都没有返回 -1。</summary>
+    /// <summary>Slot to jump to after deleting deletedIndex: scan lower page numbers first, then higher; -1 if none.</summary>
     public static int PickPageAfterDelete(DashboardLayout layout, int deletedIndex)
     {
         var pages = layout.pages;
@@ -65,14 +65,14 @@ public static class PageOps
         return -1;
     }
 
-    /// <summary>释放该页所有图表并置空槽位。不负责切页（调用方处理 currentView 与刷新）。</summary>
+    /// <summary>Frees all charts on the page and nulls the slot. Does not switch pages (caller handles currentView and refresh).</summary>
     public static bool RemovePage(CustomCharts charts, int index)
     {
         if (index < 1 || index >= DashboardLayout.MAX_PAGE_COUNT) return false;
         var pages = charts.dashboardLayout.pages;
         var page = pages[index];
         if (page == null) return false;
-        // 逐个释放图表（DashboardPage.Free 会清空 chartDatas）
+        // free charts one by one (DashboardPage.Free clears chartDatas)
         page.Free();
         pages[index] = null;
         return true;
