@@ -1,7 +1,7 @@
 {
   "name": "DashboardOverhaul",
   "version_number": "1.0.0",
-  "website_url": "",
-  "description": "Completes the Dashboard's multi-page UI: switch/add/delete/rename pages",
+  "website_url": "https://github.com/FyisFe/DSP_Mods_fyyy/tree/master/DashboardOverhaul",
+  "description": "Completes the Dashboard's multi-page UI: switch/add/delete/rename pages / 补全仪表盘多页界面：切换/新建/删除/重命名",
   "dependencies": ["xiaoye97-BepInEx-5.4.17"]
 }

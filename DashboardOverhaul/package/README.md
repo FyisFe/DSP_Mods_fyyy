@@ -1,7 +1,7 @@
 # DashboardOverhaul
 
 为游戏内**仪表盘**补全多页界面——顶部标签栏。零额外依赖、不改存档格式、始终生效。
-Adds the missing multi-page UI to the in-game **Dashboard** — a top tab bar. No dependencies, no save-format change, always on.
+Adds the missing multi-page UI to the in-game **Dashboard** — a top tab bar. No extra mod dependencies (BepInEx only), no save-format change, always on.
 
 ## 功能 / Features
 

@@ -23,6 +23,25 @@ public static class PageOps
         return -1;
     }
 
+    /// <summary>第一个非空槽（1..9），没有返回 -1。用于把无效的当前页指回有效页。</summary>
+    public static int FirstActiveSlot(DashboardLayout layout)
+    {
+        var pages = layout?.pages;
+        if (pages == null) return -1;
+        for (int i = 1; i < DashboardLayout.MAX_PAGE_COUNT; i++)
+            if (pages[i] != null) return i;
+        return -1;
+    }
+
+    /// <summary>currentView.pageIndex 是否指向一个有效的非空页（1..9）。</summary>
+    public static bool IsValidViewPage(CustomCharts charts)
+    {
+        var pages = charts?.dashboardLayout?.pages;
+        if (pages == null) return false;
+        int cur = charts.currentView.pageIndex;
+        return cur >= 1 && cur < DashboardLayout.MAX_PAGE_COUNT && pages[cur] != null;
+    }
+
     /// <summary>占用最小空槽并初始化一页；返回新页槽号，满则 -1。</summary>
     public static int AddPage(CustomCharts charts)
     {
