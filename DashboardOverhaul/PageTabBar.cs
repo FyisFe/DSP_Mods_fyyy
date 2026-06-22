@@ -402,7 +402,7 @@ public class PageTabBar
         float x = Mathf.Clamp(world.x, barCorners[0].x, barCorners[2].x);
         rt.position = new Vector3(x, _dragFixedY, _dragZ);
 
-        ReflowPlaceholder(world.x);
+        ReflowPlaceholder(x);
     }
 
     /// <summary>Drop: derive the new page order from the current child order (placeholder marks the
