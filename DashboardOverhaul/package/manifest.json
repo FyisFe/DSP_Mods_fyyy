@@ -1,7 +1,7 @@
 {
   "name": "DashboardOverhaul",
-  "version_number": "1.0.0",
+  "version_number": "1.1.0",
   "website_url": "https://github.com/FyisFe/DSP_Mods_fyyy/tree/master/DashboardOverhaul",
-  "description": "Completes the Dashboard's multi-page UI: switch/add/delete/rename pages / 补全仪表盘多页界面：切换/新建/删除/重命名",
+  "description": "A series of enhancements for the in-game Dashboard / 为游戏内仪表盘提供一系列优化",
   "dependencies": ["xiaoye97-BepInEx-5.4.17"]
 }

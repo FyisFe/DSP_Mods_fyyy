@@ -44,5 +44,6 @@ public static class UIDashboardPatch
     static void OnDestroy_Postfix()
     {
         if (Bar != null) { Bar.Free(); Bar = null; }
+        ChartRename.Free();
     }
 }
