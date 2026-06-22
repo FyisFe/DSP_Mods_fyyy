@@ -21,7 +21,7 @@ public static class ChartRename
         if (chart == null || chart.chartData == null || chart.charts == null) return;
         var dash = chart.uiDashboard;
         if (dash == null || dash.chartContentRt == null) return;
-        var statPlan = chart.charts.statPlans[chart.chartData.statPlanId];
+        var statPlan = ResolveStatPlan(chart);
         if (statPlan == null) return;
 
         var input = EnsureInput(dash);
@@ -51,6 +51,17 @@ public static class ChartRename
         if (_input != null) Object.Destroy(_input.gameObject);
         _input = null;
         _target = null;
+    }
+
+    /// <summary>Safely resolve the StatPlan bound to a chart, guarding a null pool/buffer and an
+    /// out-of-range statPlanId (e.g. a stale id during teardown). Returns null if unavailable.</summary>
+    private static StatPlan ResolveStatPlan(UIChart chart)
+    {
+        var pool = chart != null && chart.charts != null ? chart.charts.statPlans : null;
+        if (pool == null || pool.buffer == null || chart.chartData == null) return null;
+        int id = chart.chartData.statPlanId;
+        if (id < 0 || id >= pool.buffer.Length) return null;
+        return pool.buffer[id];
     }
 
     private static InputField EnsureInput(UIDashboard dash)
@@ -91,8 +102,7 @@ public static class ChartRename
     {
         var chart = _target;
         Hide();
-        if (chart == null || chart.chartData == null || chart.charts == null) return;
-        var statPlan = chart.charts.statPlans[chart.chartData.statPlanId];
+        var statPlan = ResolveStatPlan(chart);
         if (statPlan == null) return;
         string newName = (value ?? string.Empty).Trim();
         statPlan.Rename(ref newName);                 // fires onNameChanged -> title repaints
