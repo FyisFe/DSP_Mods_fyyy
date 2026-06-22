@@ -4,5 +4,28 @@ namespace DashboardOverhaul;
 
 public static class UIDashboardPatch
 {
-    // 占位：本任务仅保证编译与加载；真正的补丁在 Task 3 加入。
+    public static PageTabBar Bar;
+
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(UIDashboard), "_OnCreate")]
+    static void OnCreate_Postfix(UIDashboard __instance)
+    {
+        if (!DashboardOverhaulPlugin.ModEnabled.Value) return;
+        Bar = new PageTabBar();
+        Bar.Build(__instance);
+    }
+
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(UIDashboard), "_OnOpen")]
+    static void OnOpen_Postfix()
+    {
+        if (Bar != null) Bar.Refresh();
+    }
+
+    [HarmonyPostfix]
+    [HarmonyPatch(typeof(UIDashboard), "_OnDestroy")]
+    static void OnDestroy_Postfix()
+    {
+        if (Bar != null) { Bar.Free(); Bar = null; }
+    }
 }
