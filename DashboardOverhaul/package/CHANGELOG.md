@@ -10,6 +10,7 @@ All notable changes to DashboardOverhaul are documented here.
 ### 新增 / Added
 
 - 拖动页面标签即可重新排序，其它标签实时让位；新顺序随存档保存 / Drag a page tab to reorder pages — the other tabs slide aside in real time; the new order persists in your save
+- 未命名页面在标签上显示其位置序号，重排后自动更新（新建页面默认无名）/ An unnamed page shows its position number on the tab and updates after a reorder (new pages start unnamed)
 
 ## [1.1.0] - 2026-06-22
 

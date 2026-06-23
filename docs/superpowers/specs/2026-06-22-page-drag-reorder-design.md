@@ -58,10 +58,12 @@ persists across save/reload. No new save data, no new menu entries.
 - **`SetViewPage` early-returns on an unchanged index** (`UIDashboard.cs:295`) and re-renders
   the grid; we don't use it on commit (content is unchanged) — we set `currentView.pageIndex`
   directly and only `Refresh()` the tab bar.
-- **Default page name is frozen at creation.** `AddPage` sets `name = index.ToString()`
-  (`DashboardLayout.cs:36-43`); the tab label is `page.name`, never the live slot
-  (`PageTabBar.cs:86`). So compaction renumbering is invisible in the UI, and the pre-existing
-  quirk (an unnamed page keeps its creation-number as its label) is unchanged by this feature.
+- **Default page name is frozen at creation (vanilla).** `AddPage` sets `name = index.ToString()`
+  (`DashboardLayout.cs:36-43`); the tab label is `page.name` if set, else the live slot index
+  (`PageTabBar.cs:86`). *Shipped amendment:* the mod now blanks that auto-name on creation (see
+  [Amendments after review](#amendments-after-review-shipped)), so an unnamed page shows its LIVE
+  slot index, compaction renumbering is visible and correct, and only a name the player explicitly
+  sets is kept verbatim.
 - **Existing PageOps treats slots as reassignable storage.** Deletion already nulls a slot in
   place without shifting (`PageOps.RemovePage`, `PageOps.cs:69-79`), so gaps (e.g. slots 1,3,5)
   already occur and the reorder must handle them.
@@ -100,7 +102,7 @@ So single-tap→switch, double-click→rename, right-click→menu all keep worki
 
 ### 1. `PageOps.cs` — new pure method `ReorderPages`
 ```
-public static void ReorderPages(CustomCharts charts, IReadOnlyList<DashboardPage> newOrder)
+public static bool ReorderPages(CustomCharts charts, IReadOnlyList<DashboardPage> newOrder)  // returns false if newOrder is rejected
 ```
 - Guard: `charts`, `dashboardLayout`, `pages`, `newOrder` non-null; `newOrder` is exactly the
   current set of non-null pages (same count, same members). On mismatch, no-op (defensive).
@@ -125,9 +127,11 @@ Keep `IPointerClickHandler` exactly as-is.
   (with the dragged page at `_dragInsertIndex`), calls `PageOps.ReorderPages`, then `Refresh()`.
 - Reuse existing `_tabs`, `Refresh`, `UpdateHighlights`; no change to build/teardown lifecycle.
 
-No changes to Harmony patches, save format, `currentView` plumbing beyond the single
-`pageIndex` write, or the existing `DashboardLayoutPatch` (after compaction `pages[1]` is always
-occupied when ≥1 page exists, fully compatible with that page-1 import fix).
+No changes to save format or `currentView` plumbing beyond the single `pageIndex` write. (*Shipped
+amendment:* a small `DashboardLayout.AddPage` postfix was later added to `DashboardLayoutPatch` to
+blank vanilla auto-names — see [Amendments after review](#amendments-after-review-shipped). After
+compaction `pages[1]` is always occupied when ≥1 page exists, fully compatible with the existing
+page-1 import fix.)
 
 ## Data flow
 
@@ -178,3 +182,24 @@ mod references game assemblies. Per this mod's established workflow: keep `Reord
 6. Save → reload → the new order persists.
 7. With a single page, dragging does nothing (no errors).
 8. Drag started while a rename input is open closes the rename cleanly.
+
+## Amendments after review (shipped)
+
+Refinements made during code review and in-game testing after the initial implementation. The
+source is the current source of truth for these behaviors.
+
+- **Left-button only.** `BeginDrag`/`Drag`/`EndDrag` ignore non-left pointer buttons, so a right- or
+  middle-button drag no longer reorders pages or suppresses the right-click context menu.
+- **Drag cancelled on rebuild/teardown.** `Refresh()` and `Free()` cancel any in-progress drag, and
+  `BeginDrag` allows only one drag at a time — a mid-drag rebuild or a second pointer can no longer
+  leave a destroyed/stuck tab (`MissingReferenceException` / orphaned lifted tab).
+- **`ReorderPages` returns `bool`** and rejects non-permutations up front (`newOrder.Count != active`
+  and empty-set guards), closing a duplicate-slot hole and a latent sim-loop NPE; `EndDrag` logs a
+  warning when a reorder is rejected.
+- **Allocation-free reflow.** The per-move placeholder reflow caches the `HorizontalLayoutGroup`,
+  reuses scratch buffers, and runs in a single pass.
+- **Auto-name blanking.** A `DashboardLayout.AddPage` postfix (`DashboardLayoutPatch.AddPage_Postfix`)
+  clears the vanilla creation-index name, so an unnamed page renders its LIVE slot index (stays
+  correct after a reorder) instead of a frozen number that could collide with another page's index.
+  Covers `Init`, `SetViewPage` auto-create, and the `+` button; a player-set name is kept; not
+  retroactive to already-saved pages.

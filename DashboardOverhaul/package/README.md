@@ -19,7 +19,7 @@ A series of enhancements for the in-game **Dashboard**. No extra mod dependencie
 - **新建页面**：点击 `+` / **Add**: click `+`
 - **重命名**：双击标签，或 右键标签 → 重命名 / **Rename**: double-click a tab, or right-click → Rename
 - **删除页面**：右键标签 → 删除（有图表会先确认；至少保留一页）/ **Delete**: right-click a tab → Delete (confirms if it has charts; one page must remain)
-- **重新排序页面**：左右拖动标签 / **Reorder pages**: drag a tab left or right
+- **重新排序页面**：左右拖动标签（未命名页面的序号会随位置更新）/ **Reorder pages**: drag a tab left or right (an unnamed page's number follows its position)
 - **移动图表**：右键任意图表 → 移动到页面 → 选目标页 / **Move a chart**: right-click a chart → Move to page → pick a page
 - **重命名图表**：右键图表 → 重命名，或双击图表标题 / **Rename a chart**: right-click → Rename, or double-click the chart title
 - **删除统计项**：右键图表 → 删除统计项（会移除该统计项在所有页面的图表，有确认）/ **Delete statistic**: right-click → Delete statistic (removes that statistic's charts on every page; confirms first)
