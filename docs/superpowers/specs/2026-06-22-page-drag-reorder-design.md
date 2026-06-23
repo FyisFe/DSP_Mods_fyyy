@@ -15,10 +15,20 @@ persists across save/reload. No new save data, no new menu entries.
 ## Decisions (locked)
 
 - **Interaction = drag only.** Live reflow: the dragged tab follows the cursor and the other
-  tabs slide aside as you cross their midpoints; drop commits the previewed order. No
-  "Move left / Move right" context-menu entries (the right-click menu stays Rename / Delete).
+  tabs slide aside as the cursor passes their resting positions; drop commits the previewed
+  order. No "Move left / Move right" context-menu entries (the right-click menu stays Rename /
+  Delete).
 - **Reflow is instant snap, not a tween.** Tabs re-pack via `HorizontalLayoutGroup` when the
   placeholder moves. Smooth animation is explicitly out of scope (optional later polish).
+- **Drag visuals refined after in-game feedback (shipped behavior):**
+  - *Stable drop-slot detection.* The target insert index is computed from where the cursor
+    falls among the other tabs' **resting** positions (packed left-to-right, placeholder
+    excluded), not their live on-screen midpoints. The placeholder's width no longer feeds back
+    into the decision, so the target slot stays steady and controllable even with a wide tab.
+  - *Compact dragged chip.* While dragging, the lifted tab shrinks to a compact, ellipsized chip
+    (width cap `kDragChipMaxWidth = 120`); the placeholder matches that width. A long page title
+    no longer floats as a full-width bar that covers the rest of the row. The chip is purely a
+    drag visual — `Refresh()` rebuilds every tab at full width on drop.
 - **Approach A — reassign slots (no separate order field).** Page display order is already
   derived from array-slot order, so reorder = rewriting which `DashboardPage` object lives in
   which slot. On commit, the pages are compacted into slots `1..N` in the new order; trailing
@@ -68,14 +78,20 @@ So single-tap→switch, double-click→rename, right-click→menu all keep worki
 
 ### Live reflow via a placeholder (standard `HorizontalLayoutGroup` pattern)
 - **Begin drag** — ignore if fewer than 2 pages. Close any open rename input first (its slot is
-  about to be reassigned). Insert an empty **placeholder** `LayoutElement` (width = dragged tab's
-  width) into the layout group at the dragged tab's current sibling index to hold the gap. Lift
-  the dragged tab out of layout (`LayoutElement.ignoreLayout = true`), raise it above its siblings,
+  about to be reassigned). Shrink the dragged tab to a compact, ellipsized chip
+  (`kDragChipMaxWidth = 120`, applied directly via `SetSizeWithCurrentAnchors` since the lifted
+  tab is no longer layout-driven). Insert an empty **placeholder** `LayoutElement` of that compact
+  width into the layout group at the dragged tab's current sibling index to hold the gap. Lift the
+  dragged tab out of layout (`LayoutElement.ignoreLayout = true`), raise it above its siblings,
   and disable its raycasts so it doesn't block hit-testing.
-- **During drag** — move the lifted tab to follow the cursor's x (clamped to the bar, y fixed).
-  Compute the target insert index by comparing cursor-x to the midpoints of the *other* tabs;
-  when it changes, move the placeholder to that sibling index. The layout group instantly
-  re-packs the remaining tabs around the gap (the "slide aside" effect).
+- **During drag** — move the lifted chip to follow the cursor's x (clamped to the bar, y fixed).
+  Compute the target insert index from the *other* tabs' **resting** centers — pack them
+  left-to-right from the bar's left edge using each tab's own (stable) width + the layout group's
+  spacing, then count how many resting centers sit left of the cursor. This is
+  placeholder-independent, so moving the placeholder never shifts the decision (stable, predictable
+  slot). Skip the reorder when the index is unchanged; otherwise move the placeholder to that
+  sibling index and the layout group instantly re-packs the remaining tabs around the gap (the
+  "slide aside" effect).
 - **End drag** — read the final index from the placeholder, remove it, restore the dragged tab
   (`ignoreLayout = false`, re-enable raycasts), build the new ordered page list, commit via
   `PageOps.ReorderPages`, then `Refresh()` for a clean rebuild with correct slots + highlight.

@@ -479,3 +479,15 @@ git commit -m "release(DashboardOverhaul): page drag-reorder; docs + version 1.2
 **Placeholder scan:** No TBD/TODO; all code shown in full. No "add error handling"/"handle edge cases" hand-waves — guards (`_draggingTab != tab`, null `_root`/`Dashboard`, `tabCount < 2`, permutation validation) are written out.
 
 **Type consistency:** `PageOps.ReorderPages(CustomCharts, IReadOnlyList<DashboardPage>)` defined in Task 1 and called identically in Task 2's `EndDrag`. `PageTabBar.BeginDrag/Drag/EndDrag(PageTab, PointerEventData)` defined in Task 2 Step 5 and called from `PageTab`'s handlers in Task 2 Step 1. Fields `_addButton`/`_placeholder`/`_draggingTab`/`_dragFixedY`/`_dragZ` declared in Step 2 and used in Steps 3–5. `PageTab.Slot` (int) and `PageTab.Background` (`Image`) match the existing class. Game members verified against `GameCode-latest/`: `CustomCharts.dashboardLayout`, `CustomCharts.currentView.pageIndex`, `DashboardLayout.pages`, `DashboardLayout.MAX_PAGE_COUNT`, `UIDashboard.charts`, `UIDashboard.focusColor`.
+
+---
+
+## Amendments after execution
+
+The tasks above were implemented as written; the following refinements were made during code review and the in-game acceptance pass. They change `PageTabBar.cs` / `PageOps.cs` beyond the code blocks shown above — **the design spec and the source are the current source of truth** for these behaviors.
+
+- **Review fix (commit `66282f0`):** `Drag` passes the *clamped* cursor x (not raw `world.x`) to `ReflowPlaceholder`.
+- **Review minor #1 (commit `ea1a58a`):** `ReflowPlaceholder` caches the last insert index (`_dragInsertIndex`) and skips the child-order rebuild + `SetSiblingIndex` churn when the index is unchanged.
+- **Review minor #3 (commit `ea1a58a`):** `ReorderPages` adds an explicit `if (newOrder.Count >= DashboardLayout.MAX_PAGE_COUNT) return;` bound guard (previously only implied by the permutation check).
+- **In-game feedback — stable drop-slot detection (commit `ee405f2`):** the target insert index is now computed from the other tabs' **resting** positions (packed left-to-right from the bar's left edge using each tab's own width + the layout group's spacing), not their live on-screen midpoints. This removes the placeholder-shift feedback loop so the drop slot stays stable with a wide (long-title) tab.
+- **In-game feedback — compact dragged chip (commit `eadfee4`):** while dragging, the lifted tab shrinks to a compact ellipsized chip (`kDragChipMaxWidth = 120`, applied via `SetSizeWithCurrentAnchors`); the placeholder matches that width, so a long page title no longer floats as a full-width bar that overlaps the row. The chip is a drag-only visual — `Refresh()` rebuilds tabs at full width on drop.
