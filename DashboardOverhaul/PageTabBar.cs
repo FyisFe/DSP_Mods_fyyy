@@ -23,6 +23,7 @@ public class PageTabBar
     private const int kTabHeight = 20;
     private const int kTabMinWidth = 64;
     private const float kTabMaxWidth = 160f;
+    private const float kDragChipMaxWidth = 120f; // while dragging, the lifted tab shrinks to this cap so a long title doesn't cover the row
     private const float kTabHPadding = 20f; // sum of 10px left + 10px right text padding
     private const float kBaseLeftMargin = 40f;
     private const float kTopOffset = -4f;
@@ -367,6 +368,7 @@ public class PageTabBar
         _draggingTab = tab;
         _dragInsertIndex = -1; // force the first reflow frame to apply
         var rt = (RectTransform)tab.transform;
+        var le = tab.GetComponent<LayoutElement>();
 
         // Capture the tab's current center world position so lifting it doesn't visually jump.
         var corners = new Vector3[4];
@@ -374,17 +376,27 @@ public class PageTabBar
         Vector3 center = (corners[0] + corners[2]) * 0.5f;
         _dragFixedY = center.y;
         _dragZ = rt.position.z;
-        float width = rt.rect.width;
 
-        // Equal-width placeholder at the tab's slot keeps the row width and other tabs in place.
+        // Shrink the dragged tab to a compact, ellipsized chip so a long title doesn't overlap the
+        // rest of the row while it floats under the cursor. Only affects drag visuals -- the chip is
+        // destroyed on drop, where Refresh rebuilds every tab at its full width.
+        float width = rt.rect.width;
+        if (tab.Label != null && le != null)
+        {
+            FitTabWidth(tab.Label, le, tab.Label.text, kDragChipMaxWidth);
+            width = le.preferredWidth;
+        }
+
+        // Compact-width placeholder marks the drop gap; the other tabs slide around it.
         _placeholder = CreatePlaceholder(width);
         _placeholder.SetSiblingIndex(rt.GetSiblingIndex());
 
-        // Lift out of layout control; center pivot so it tracks the cursor by its middle.
-        var le = tab.GetComponent<LayoutElement>();
+        // Lift out of layout control; center pivot so it tracks the cursor by its middle, and apply
+        // the compact width directly (ignoreLayout means the LayoutElement no longer drives size).
         if (le != null) le.ignoreLayout = true;
         if (tab.Background != null) tab.Background.raycastTarget = false;
         rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
         rt.position = center;                         // keep visually in place at grab
         rt.SetAsLastSibling();                        // render on top
     }
