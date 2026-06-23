@@ -43,6 +43,8 @@ public class PageTab : MonoBehaviour, IPointerClickHandler, IBeginDragHandler, I
 
     public void OnBeginDrag(PointerEventData eventData)
     {
+        // Only the left button reorders; right/middle drags must not (right-click is the context menu).
+        if (eventData.button != PointerEventData.InputButton.Left) return;
         if (_bar != null) _bar.BeginDrag(this, eventData);
     }
 

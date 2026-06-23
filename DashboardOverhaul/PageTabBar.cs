@@ -19,6 +19,9 @@ public class PageTabBar
     private float _dragFixedY;
     private float _dragZ;
     private int _dragInsertIndex = -1; // last placeholder insert index; skips redundant reflow when unchanged
+    private HorizontalLayoutGroup _layout;                    // cached at Build; its spacing/padding are read every drag-move frame
+    private readonly Vector3[] _dragCorners = new Vector3[4]; // reused per-move scratch (avoids per-frame Vector3[4] allocations)
+    private readonly List<Transform> _reflowOrdered = new();  // reused per-move scratch for the sibling reorder
 
     private const int kTabHeight = 20;
     private const int kTabMinWidth = 64;
@@ -45,6 +48,7 @@ public class PageTabBar
         _root.sizeDelta = new Vector2(0f, kTabHeight);
 
         var layout = go.AddComponent<HorizontalLayoutGroup>();
+        _layout = layout;
         layout.spacing = 4f;
         layout.childForceExpandWidth = false;
         layout.childForceExpandHeight = true;
@@ -63,6 +67,7 @@ public class PageTabBar
         _addButton = null;
         _placeholder = null;
         _draggingTab = null;
+        _layout = null;
         _tabs.Clear();
         Dashboard = null;
     }
@@ -82,6 +87,7 @@ public class PageTabBar
     public void Refresh()
     {
         if (_root == null || Dashboard == null) return;
+        CleanupDrag(); // a rebuild cancels any in-progress drag; the lifted tab + placeholder are destroyed in the sweep below
         for (int c = _root.childCount - 1; c >= 0; c--)
             Object.Destroy(_root.GetChild(c).gameObject);
         _tabs.Clear();
@@ -347,16 +353,14 @@ public class PageTabBar
         Refresh();
     }
 
-    /// <summary>Begin reordering: lift the dragged tab out of the layout, hold its gap with an
-    /// equal-width placeholder, and raise it above its siblings so it can follow the cursor. No-op
-    /// with fewer than two pages.</summary>
+    /// <summary>Begin reordering: lift the dragged tab out of the layout, hold its gap with a
+    /// placeholder of the same (compact chip) width, and raise it above its siblings so it can follow
+    /// the cursor. No-op with fewer than two pages, or while another drag is already active.</summary>
     public void BeginDrag(PageTab tab, PointerEventData eventData)
     {
         if (_root == null || Dashboard == null || tab == null) return;
-
-        int tabCount = 0;
-        foreach (var t in _tabs) if (t != null) tabCount++;
-        if (tabCount < 2) return;   // nothing to reorder
+        if (_draggingTab != null) return; // one drag at a time; a second pointer would otherwise orphan the first lifted tab
+        if (_tabs.Count < 2) return;      // nothing to reorder
 
         // A drag invalidates any in-progress rename (its slot is about to be reassigned).
         if (_renamingSlot >= 0)
@@ -380,11 +384,15 @@ public class PageTabBar
         // Shrink the dragged tab to a compact, ellipsized chip so a long title doesn't overlap the
         // rest of the row while it floats under the cursor. Only affects drag visuals -- the chip is
         // destroyed on drop, where Refresh rebuilds every tab at its full width.
-        float width = rt.rect.width;
+        float width;
         if (tab.Label != null && le != null)
         {
             FitTabWidth(tab.Label, le, tab.Label.text, kDragChipMaxWidth);
             width = le.preferredWidth;
+        }
+        else
+        {
+            width = rt.rect.width;
         }
 
         // Compact-width placeholder marks the drop gap; the other tabs slide around it.
@@ -411,9 +419,8 @@ public class PageTabBar
             return;
 
         var rt = (RectTransform)tab.transform;
-        var barCorners = new Vector3[4];
-        _root.GetWorldCorners(barCorners);
-        float x = Mathf.Clamp(world.x, barCorners[0].x, barCorners[2].x);
+        _root.GetWorldCorners(_dragCorners);
+        float x = Mathf.Clamp(world.x, _dragCorners[0].x, _dragCorners[2].x);
         rt.position = new Vector3(x, _dragFixedY, _dragZ);
 
         ReflowPlaceholder(x);
@@ -443,7 +450,9 @@ public class PageTabBar
             if (page != null) newOrder.Add(page);
         }
 
-        PageOps.ReorderPages(Dashboard.charts, newOrder);
+        if (!PageOps.ReorderPages(Dashboard.charts, newOrder))
+            DashboardOverhaulPlugin.Logger.LogWarning(
+                "[DashboardOverhaul] Reorder rejected: built order was not a permutation of the current pages; drag discarded.");
         CleanupDrag();
         Refresh();   // rebuilds tabs from the new slots; destroys placeholder + lifted tab
     }
@@ -466,49 +475,43 @@ public class PageTabBar
     {
         if (_placeholder == null || _root == null) return;
 
-        // Layout metrics for reconstructing resting (placeholder-independent) positions.
+        // Layout metrics for reconstructing resting (placeholder-independent) positions. The layout
+        // group is cached at Build; its spacing/padding never change after that.
         float scale = _root.lossyScale.x;
-        float spacing = 0f, padLeft = 0f;
-        var hlg = _root.GetComponent<HorizontalLayoutGroup>();
-        if (hlg != null) { spacing = hlg.spacing; padLeft = hlg.padding.left; }
-        var barCorners = new Vector3[4];
-        _root.GetWorldCorners(barCorners);
+        float spacing = _layout != null ? _layout.spacing : 0f;
+        float padLeft = _layout != null ? _layout.padding.left : 0f;
+        _root.GetWorldCorners(_dragCorners);
+        float barLeft = _dragCorners[0].x;
 
-        // Pack the non-dragged tabs left-to-right at their RESTING positions (as if the placeholder
-        // weren't there) and count how many resting centers sit left of the cursor. Using resting
-        // (not live) centers means moving the placeholder never shifts the decision -> the target slot
-        // stays stable and predictable even when a long-title tab makes the placeholder very wide.
-        int target = 0, realCount = 0;
-        var c = new Vector3[4];
-        float x = barCorners[0].x + padLeft * scale; // resting left edge of the first tab (world)
+        // One pass: collect the non-dragged tabs in sibling order while packing them left-to-right at
+        // their RESTING positions (as if the placeholder weren't there) and counting how many resting
+        // centers sit left of the cursor. Using resting (not live) centers means moving the placeholder
+        // never shifts the decision -> the target slot stays stable and predictable even when a
+        // long-title tab makes the placeholder very wide.
+        _reflowOrdered.Clear();
+        int target = 0;
+        float x = barLeft + padLeft * scale; // resting left edge of the first tab (world)
         for (int i = 0; i < _root.childCount; i++)
         {
             var child = _root.GetChild(i);
             var pt = child.GetComponent<PageTab>();
             if (pt == null || pt == _draggingTab) continue;
-            realCount++;
-            ((RectTransform)child).GetWorldCorners(c);
-            float w = c[2].x - c[0].x;                // stable world width (placeholder shifts position, not width)
+            _reflowOrdered.Add(child);
+            ((RectTransform)child).GetWorldCorners(_dragCorners);
+            float w = _dragCorners[2].x - _dragCorners[0].x; // stable world width (placeholder shifts position, not width)
             if (x + w * 0.5f < cursorWorldX) target++;
             x += w + spacing * scale;
         }
-        if (target > realCount) target = realCount;
+        if (target > _reflowOrdered.Count) target = _reflowOrdered.Count;
         if (target == _dragInsertIndex) return; // placeholder already here; nothing to reflow
         _dragInsertIndex = target;
 
-        // Rebuild child order: real tabs with the placeholder at the new index, + button last,
+        // Apply the new child order: real tabs with the placeholder at the new index, + button last,
         // dragged tab on top.
-        var ordered = new List<Transform>(realCount + 2);
-        for (int i = 0; i < _root.childCount; i++)
-        {
-            var child = _root.GetChild(i);
-            var pt = child.GetComponent<PageTab>();
-            if (pt != null && pt != _draggingTab) ordered.Add(child);
-        }
-        ordered.Insert(target, _placeholder);
-        if (_addButton != null) ordered.Add(_addButton);
-        ordered.Add(_draggingTab.transform);
-        for (int i = 0; i < ordered.Count; i++) ordered[i].SetSiblingIndex(i);
+        _reflowOrdered.Insert(target, _placeholder);
+        if (_addButton != null) _reflowOrdered.Add(_addButton);
+        _reflowOrdered.Add(_draggingTab.transform);
+        for (int i = 0; i < _reflowOrdered.Count; i++) _reflowOrdered[i].SetSiblingIndex(i);
     }
 
     private void CleanupDrag()
