@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace DashboardOverhaul;
 
 /// <summary>
@@ -48,7 +50,9 @@ public static class PageOps
         var layout = charts.dashboardLayout;
         int slot = FirstFreeSlot(layout);
         if (slot < 0) return -1;
-        layout.AddPage(slot); // vanilla AddPage: new DashboardPage().Init(), name = slot.ToString()
+        // vanilla AddPage sets name = slot.ToString(); DashboardLayoutPatch.AddPage_Postfix blanks that
+        // auto-name so the tab shows the page's LIVE slot index (which stays correct after a reorder).
+        layout.AddPage(slot);
         return slot;
     }
 
@@ -75,6 +79,58 @@ public static class PageOps
         // free charts one by one (DashboardPage.Free clears chartDatas)
         page.Free();
         pages[index] = null;
+        return true;
+    }
+
+    /// <summary>
+    /// Reorders pages to match <paramref name="newOrder"/> (the desired left-to-right display
+    /// order), compacting them into slots 1..N and nulling the rest. <paramref name="newOrder"/>
+    /// must contain exactly the current set of non-null pages (same count and members); on any
+    /// mismatch this is a no-op and returns false (defensive). Repoints currentView.pageIndex to
+    /// wherever the previously-viewed page object lands, so the player stays on the same page. Slot
+    /// index is the page's save key (DashboardLayout.Export/Import is slot-by-slot), so the new order
+    /// persists on the next game save with no format change.
+    /// </summary>
+    /// <returns>true if the reorder was applied; false if <paramref name="newOrder"/> was rejected.</returns>
+    public static bool ReorderPages(CustomCharts charts, IReadOnlyList<DashboardPage> newOrder)
+    {
+        var pages = charts?.dashboardLayout?.pages;
+        if (pages == null || newOrder == null) return false;
+
+        // newOrder must be exactly the current non-null page set. Checking the count first bounds the
+        // write to slots 1..N (active <= 9 < MAX_PAGE_COUNT, so no slot overflow) and rejects any
+        // duplicate-plus-extra list that the set check below could otherwise let through.
+        int active = ActivePageCount(charts);
+        if (active == 0) return false;
+        if (newOrder.Count != active) return false;
+
+        // Validate that newOrder is a permutation of the current non-null pages.
+        var set = new HashSet<DashboardPage>();
+        foreach (var p in newOrder)
+        {
+            if (p == null) return false;
+            set.Add(p);
+        }
+        if (set.Count != active) return false;           // duplicates
+        for (int i = 1; i < DashboardLayout.MAX_PAGE_COUNT; i++)
+            if (pages[i] != null && !set.Contains(pages[i])) return false; // a current page is missing
+
+        // Remember the page the player is viewing (by reference) so we can follow it.
+        int cur = charts.currentView.pageIndex;
+        DashboardPage viewed = (cur >= 1 && cur < DashboardLayout.MAX_PAGE_COUNT) ? pages[cur] : null;
+
+        // Write the new order into slots 1..N; null the remainder.
+        for (int i = 0; i < newOrder.Count; i++)
+            pages[i + 1] = newOrder[i];
+        for (int i = newOrder.Count + 1; i < DashboardLayout.MAX_PAGE_COUNT; i++)
+            pages[i] = null;
+
+        // Repoint the current view to the viewed page's new slot (fallback: first slot).
+        int newCur = 1;
+        if (viewed != null)
+            for (int i = 1; i < DashboardLayout.MAX_PAGE_COUNT; i++)
+                if (pages[i] == viewed) { newCur = i; break; }
+        charts.currentView.pageIndex = newCur;
         return true;
     }
 

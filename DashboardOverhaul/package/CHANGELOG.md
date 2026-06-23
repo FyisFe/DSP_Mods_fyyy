@@ -3,6 +3,15 @@
 All notable changes to DashboardOverhaul are documented here.
 本文件记录 DashboardOverhaul 的版本变更。
 
+## [1.2.0] - 2026-06-22
+
+页面重新排序 / Page reordering.
+
+### 新增 / Added
+
+- 拖动页面标签即可重新排序，其它标签实时让位；新顺序随存档保存 / Drag a page tab to reorder pages — the other tabs slide aside in real time; the new order persists in your save
+- 未命名页面在标签上显示其位置序号，重排后自动更新（新建页面默认无名）/ An unnamed page shows its position number on the tab and updates after a reorder (new pages start unnamed)
+
 ## [1.1.0] - 2026-06-22
 
 图表统计项管理 / Chart statistic management.
