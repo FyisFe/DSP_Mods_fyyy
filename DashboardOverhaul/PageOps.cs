@@ -50,7 +50,9 @@ public static class PageOps
         var layout = charts.dashboardLayout;
         int slot = FirstFreeSlot(layout);
         if (slot < 0) return -1;
-        layout.AddPage(slot); // vanilla AddPage: new DashboardPage().Init(), name = slot.ToString()
+        // vanilla AddPage sets name = slot.ToString(); DashboardLayoutPatch.AddPage_Postfix blanks that
+        // auto-name so the tab shows the page's LIVE slot index (which stays correct after a reorder).
+        layout.AddPage(slot);
         return slot;
     }
 
