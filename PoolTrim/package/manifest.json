@@ -1,0 +1,9 @@
+{
+  "name": "PoolTrim",
+  "version_number": "1.0.0",
+  "website_url": "https://github.com/FyisFe/DSP_Mods_fyyy",
+  "description": "Trims belt path pool slack on load - huge RAM savings for megabase saves / 读档时裁剪传送带路径池松弛，超大存档内存大幅下降",
+  "dependencies": [
+    "xiaoye97-BepInEx-5.4.17"
+  ]
+}
