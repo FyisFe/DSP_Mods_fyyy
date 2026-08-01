@@ -1,6 +1,5 @@
 using System;
 using BepInEx;
-using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
 
@@ -14,17 +13,10 @@ namespace PoolTrim
         public const string VERSION = "1.0.0";
 
         internal static ManualLogSource Log;
-        internal static ConfigEntry<bool> Enabled;
-        internal static ConfigEntry<int> MarginPoints;
 
         private void Awake()
         {
             Log = Logger;
-            Enabled = Config.Bind("General", "Enabled", true,
-                "Trim cargo path capacity down to its real length when a save is loaded.");
-            MarginPoints = Config.Bind("General", "MarginPoints", 0,
-                "Extra points to keep as headroom on each cargo path (0 = trim to exact length).");
-
             Harmony.CreateAndPatchAll(typeof(Patches), GUID);
             Log.LogInfo("PoolTrim ready.");
         }
@@ -44,11 +36,9 @@ namespace PoolTrim
         [HarmonyPostfix, HarmonyPatch(typeof(CargoPath), nameof(CargoPath.Import))]
         private static void TrimAfterImport(CargoPath __instance)
         {
-            if (!PoolTrimPlugin.Enabled.Value)
-                return;
             try
             {
-                int target = BufferLength(__instance) + PoolTrimPlugin.MarginPoints.Value;
+                int target = BufferLength(__instance);
                 if (__instance.buffer != null && __instance.buffer.Length > target)
                 {
                     TrimmedPoints += __instance.buffer.Length - target;
