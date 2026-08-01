@@ -19,7 +19,7 @@ namespace LoadMemProfiler
     {
         public const string GUID = "fyyy.dsp.loadmemprofiler";
         public const string NAME = "LoadMemProfiler";
-        public const string VERSION = "0.1.0";
+        public const string VERSION = "0.2.0";
 
         internal static ManualLogSource Log;
         internal static LoadMemProfilerPlugin Instance;
@@ -304,6 +304,132 @@ namespace LoadMemProfiler
         }
     }
 
+    // Scans pool capacity vs. actual usage after a successful load, to attribute
+    // the file->memory amplification (capacity slack vs. inherent per-slot cost).
+    internal static class CapacityReport
+    {
+        private static readonly AccessTools.FieldRef<CargoPath, int> PathBufferLength =
+            AccessTools.FieldRefAccess<CargoPath, int>("bufferLength");
+
+        public static void WriteReport(string profilePath)
+        {
+            GameData data = GameMain.data;
+            if (data == null || data.factories == null)
+                return;
+
+            int szEntity = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<EntityData>();
+            int szAnim = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<AnimData>();
+            int szSign = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<SignData>();
+            int szCargo = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<Cargo>();
+            int szBelt = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<BeltComponent>();
+            int szInserter = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<InserterComponent>();
+            int szAssembler = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<AssemblerComponent>();
+            // per entity slot: EntityData + AnimData + SignData + 16 conn ints + mutex ref
+            long entitySlot = szEntity + szAnim + szSign + 64 + 8;
+            const long pathSlot = 1 + 12 + 16; // buffer byte + pointPos + pointRot
+
+            long entCap = 0, entCur = 0;
+            long pathCap = 0, pathLen = 0, pathCount = 0;
+            long cargoCap = 0, cargoCur = 0;
+            long beltCap = 0, beltCur = 0;
+            long insCap = 0, insCur = 0;
+            long asmCap = 0, asmCur = 0;
+            var perFactory = new List<KeyValuePair<long, string>>();
+
+            for (int i = 0; i < data.factoryCount; i++)
+            {
+                PlanetFactory f = data.factories[i];
+                if (f == null)
+                    continue;
+                long fSlack = 0;
+                if (f.entityPool != null)
+                {
+                    entCap += f.entityPool.Length;
+                    entCur += f.entityCursor;
+                    fSlack += (f.entityPool.Length - f.entityCursor) * entitySlot;
+                }
+                CargoTraffic t = f.cargoTraffic;
+                if (t != null)
+                {
+                    if (t.pathPool != null)
+                    {
+                        for (int p = 1; p < t.pathCursor; p++)
+                        {
+                            CargoPath path = t.pathPool[p];
+                            if (path == null || path.buffer == null)
+                                continue;
+                            pathCount++;
+                            pathCap += path.buffer.Length;
+                            pathLen += PathBufferLength(path);
+                        }
+                    }
+                    if (t.container != null && t.container.cargoPool != null)
+                    {
+                        cargoCap += t.container.cargoPool.Length;
+                        cargoCur += t.container.cursor;
+                    }
+                    if (t.beltPool != null)
+                    {
+                        beltCap += t.beltPool.Length;
+                        beltCur += t.beltCursor;
+                    }
+                }
+                FactorySystem fs = f.factorySystem;
+                if (fs != null)
+                {
+                    if (fs.inserterPool != null)
+                    {
+                        insCap += fs.inserterPool.Length;
+                        insCur += fs.inserterCursor;
+                    }
+                    if (fs.assemblerPool != null)
+                    {
+                        asmCap += fs.assemblerPool.Length;
+                        asmCur += fs.assemblerCursor;
+                    }
+                }
+                if (f.planet != null)
+                    perFactory.Add(new KeyValuePair<long, string>(fSlack,
+                        string.Format("astro={0} entCap={1} entCur={2}", f.planet.astroId,
+                            f.entityPool != null ? f.entityPool.Length : 0, f.entityCursor)));
+            }
+
+            var sb = new StringBuilder(8192);
+            sb.AppendLine("== LoadMemProfiler capacity report ==");
+            sb.AppendLine(string.Format(
+                "sizeof: EntityData={0} AnimData={1} SignData={2} Cargo={3} BeltComponent={4} InserterComponent={5} AssemblerComponent={6}",
+                szEntity, szAnim, szSign, szCargo, szBelt, szInserter, szAssembler));
+            sb.AppendLine(string.Format("factories={0}", data.factoryCount));
+            Line(sb, "entity slots (pool incl. anim/sign/conn/mutex)", entCap, entCur, entitySlot);
+            Line(sb, "cargo path points (buffer+pointPos+pointRot)", pathCap, pathLen, pathSlot);
+            sb.AppendLine(string.Format("  cargo paths: {0}", pathCount));
+            Line(sb, "cargo pool (Cargo)", cargoCap, cargoCur, szCargo);
+            Line(sb, "belt pool (BeltComponent)", beltCap, beltCur, szBelt);
+            Line(sb, "inserter pool", insCap, insCur, szInserter);
+            Line(sb, "assembler pool", asmCap, asmCur, szAssembler);
+
+            perFactory.Sort((a, b) => b.Key.CompareTo(a.Key));
+            sb.AppendLine("top 10 factories by entity slack bytes:");
+            for (int i = 0; i < Math.Min(10, perFactory.Count); i++)
+                sb.AppendLine(string.Format("  {0:F0} MB  {1}",
+                    perFactory[i].Key / (1024.0 * 1024.0), perFactory[i].Value));
+
+            string reportPath = Path.ChangeExtension(profilePath, null) + "_capacity.txt";
+            File.WriteAllText(reportPath, sb.ToString());
+            LoadMemProfilerPlugin.Log.LogInfo(sb.ToString());
+            LoadMemProfilerPlugin.Log.LogInfo("LoadMemProfiler: capacity report -> " + reportPath);
+        }
+
+        private static void Line(StringBuilder sb, string name, long cap, long cur, long slotBytes)
+        {
+            double gb = 1024.0 * 1024.0 * 1024.0;
+            sb.AppendLine(string.Format(
+                "{0}: capacity={1} used={2} ({3:P0})  mem@cap={4:F2} GB  slack={5:F2} GB",
+                name, cap, cur, cap > 0 ? (double) cur / cap : 0,
+                cap * slotBytes / gb, (cap - cur) * slotBytes / gb));
+        }
+    }
+
     internal static class Patches
     {
         internal static ProfileSession Session;
@@ -355,6 +481,8 @@ namespace LoadMemProfiler
                 if (__exception != null)
                     session.Record("load_exception", __exception.GetType().Name);
                 session.Finish();
+                if (__exception == null)
+                    CapacityReport.WriteReport(session.FilePath);
                 LoadMemProfilerPlugin.Instance.StartPostLoadSampling(session);
             }
             catch (Exception e)
