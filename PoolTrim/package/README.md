@@ -6,7 +6,7 @@
 
 ### 原理
 
-游戏里相连的传送带在逻辑上合并为"路径"（`CargoPath`）。每条路径按**点位**存储数据，一格传送带对应若干个点位，每个点位需要 3 份并行数组共 **29 字节**：
+游戏不逐格模拟传送带，而是把首尾相连、中间无分叉的一串带子合并成一条"路径"（`CargoPath`）整体处理（遇到分流器、汇入点就断开成新路径）。每条路径按**点位**存储数据，一格传送带对应约 30 个点位（点位是货物定位的最小单位），每个点位需要 3 份并行数组共 **29 字节**：
 
 | 数组 | 内容 | 每点字节 |
 |------|------|---------|
@@ -21,7 +21,7 @@
 - 存档时会把这个虚高的容量数字原样写入存档（但数据本体只写长度部分）；
 - 读档时 `CargoPath.Import` 先按存档里的容量数字全额分配三份数组，再只填入长度部分的数据。
 
-于是一个反复改造过的老基地，容量与实际长度的比值会越滚越大。实测一个 45GB、266 工厂、123 万条路径的存档：**点位总容量 22.8 亿，实际使用仅 7.1 亿（31%）**，即 22.8 亿 × 29B 中有 **42GB 是纯浪费**——分配了、提交了物理内存/页面文件，但永远不会被读写。
+于是一个反复改造过的老基地，容量与实际长度的比值会越滚越大。实测一个 45GB 的存档（266 颗已建设行星、2350 万格传送带合并为 123 万条路径）：**点位总容量 22.8 亿，实际使用仅 7.1 亿（31%）**，即 22.8 亿 × 29B 中有 **42GB 是纯浪费**——分配了、提交了物理内存/页面文件，但永远不会被读写。
 
 ### 本 mod 的做法
 
@@ -48,7 +48,7 @@ Harmony postfix 挂在 `CargoPath.Import` 上：每条路径导入完成后，�
 
 ### How it works
 
-Connected belts are merged into logical *paths*. Each path stores per-point data in three parallel arrays, **29 bytes per point**: `buffer` (cargo occupancy, 1B), `pointPos` (Vector3, 12B), `pointRot` (Quaternion, 16B). One belt tile spans several points.
+The game doesn't simulate belts tile by tile — an unbranched run of connected belts is merged into one *path* (`CargoPath`), split at splitters and merge points. Each path stores per-point data in three parallel arrays, **29 bytes per point**: `buffer` (cargo occupancy, 1B), `pointPos` (Vector3, 12B), `pointRot` (Quaternion, 16B). One belt tile spans ~30 points (points are the finest unit of cargo positioning).
 
 These arrays are allocated at the path's **capacity**, while real data only fills its **length**. Capacity never shrinks:
 
@@ -57,7 +57,7 @@ These arrays are allocated at the path's **capacity**, while real data only fill
 - saving writes this inflated capacity number into the save file (though only the length's worth of data);
 - loading (`CargoPath.Import`) allocates all three arrays at the saved capacity, then fills only the length.
 
-So a long-lived, heavily-rebuilt base accumulates slack indefinitely. Measured on a 45GB save (266 factories, 1.23M paths): **2.28 billion points of capacity vs. 714 million actually used (31%)** — **42GB of committed memory that is never read or written**.
+So a long-lived, heavily-rebuilt base accumulates slack indefinitely. Measured on a 45GB save (266 built-up planets, 23.5M belt tiles merged into 1.23M paths): **2.28 billion points of capacity vs. 714 million actually used (31%)** — **42GB of committed memory that is never read or written**.
 
 ### What the mod does
 
