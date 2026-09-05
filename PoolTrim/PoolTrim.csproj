@@ -4,7 +4,7 @@
     <TargetFramework>net472</TargetFramework>
     <AssemblyName>PoolTrim</AssemblyName>
     <RootNamespace>PoolTrim</RootNamespace>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <LangVersion>latest</LangVersion>
     <OutputPath>bin\Release\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
@@ -44,8 +44,7 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Release'">
-    <Exec Command="del /F /Q package\$(ProjectName)-$(Version).zip
-powershell Compress-Archive -Force -DestinationPath 'package/$(ProjectName)-$(Version).zip' -Path &quot;$(TargetPath)&quot;, package/icon.png, package/manifest.json, package/README.md" />
+    <Exec Command="powershell -NoProfile -Command &quot;Compress-Archive -Force -DestinationPath '$(ProjectDir)package/$(ProjectName)-$(Version).zip' -Path '$(TargetPath)', '$(ProjectDir)package/icon.png', '$(ProjectDir)package/manifest.json', '$(ProjectDir)package/README.md'&quot;" />
   </Target>
 
 </Project>

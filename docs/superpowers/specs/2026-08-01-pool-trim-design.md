@@ -2,6 +2,8 @@
 
 日期：2026-08-01。前置：`2026-08-01-load-memory-profiler-design.md`（阶段 1 诊断）。
 
+本文保留最初调研记录，包含当时尚未确认的估算和方案。当前行为、建造余量、测量及验证范围以 [PoolTrim README](../../../PoolTrim/package/README.md) 为准。
+
 ## 诊断结论（LoadMemProfiler v0.2.0 实测）
 
 45GB 存档（Day24-结档，266 工厂）实测：

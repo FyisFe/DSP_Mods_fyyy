@@ -21,7 +21,7 @@
 - 配置：仅 `Enabled`（bool，默认 true）；`Enabled==false` 时所有 Harmony 逻辑直接放行原版、不建标签栏。
 - **验证循环（本仓库无单元测试框架，注入式 Unity UI 不适用传统 TDD）**：每个任务结尾先 `dotnet build`（必须成功），里程碑任务再做游戏内手动核对；每任务一次 commit。
 - 构建：`dotnet build "DashboardOverhaul/DashboardOverhaul.csproj" -c Debug`，产物 `DashboardOverhaul/bin/Debug/net472/DashboardOverhaul.dll`。
-- 游戏与插件目录（按实际安装调整）：游戏根 `C:\Program Files (x86)\Applications\Steam\steamapps\common\Dyson Sphere Program`，插件目录 `<游戏根>\BepInEx\plugins\DashboardOverhaul\`。把上面产物 DLL 复制到该目录后启动游戏。
+- 插件目录：当前游戏或模组配置目录下的 `BepInEx/plugins/DashboardOverhaul/`。把上面产物 DLL 复制到该目录后启动游戏。
 - commit 信息**不要**加 Claude co-author 或 Claude-Session 尾注（用户偏好）。
 
 ## File Structure

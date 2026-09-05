@@ -1,5 +1,7 @@
 # 读档内存优化 —— 阶段 1：LoadMemProfiler 诊断 mod 设计
 
+本文保留阶段1的历史设计。当前插件的指标、采样流程、配置和验证范围由 [LoadMemProfiler README](../../../LoadMemProfiler/README.md) 维护。
+
 日期：2026-08-01
 
 ## 背景与问题

@@ -4,7 +4,7 @@
     <TargetFramework>net472</TargetFramework>
     <AssemblyName>LoadMemProfiler</AssemblyName>
     <RootNamespace>LoadMemProfiler</RootNamespace>
-    <Version>0.1.0</Version>
+    <Version>0.3.1</Version>
     <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <OutputPath>bin\Release\</OutputPath>
@@ -19,6 +19,8 @@
 
   <ItemGroup>
     <Compile Include="Plugins\LoadMemProfiler.cs" />
+    <Compile Include="Plugins\Measurements.cs" />
+    <Compile Include="Plugins\CapacitySnapshot.cs" />
   </ItemGroup>
 
   <ItemGroup>
