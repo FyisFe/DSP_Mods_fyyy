@@ -215,7 +215,8 @@ namespace LoadMemProfiler
                     foreach (DysonSphereLayer layer in sphere.layersIdBased)
                     {
                         if (layer?.shellPool == null) continue;
-                        for (int sh = 1; sh < layer.shellPool.Length; sh++)
+                        // Removing a layer clears its pool between scan batches.
+                        for (int sh = 1; sh < Length(layer.shellPool); sh++)
                         {
                             DysonShell shell = layer.shellPool[sh];
                             if (shell != null && shell.id == sh)
