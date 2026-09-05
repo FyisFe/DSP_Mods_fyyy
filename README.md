@@ -1,16 +1,18 @@
 # DSP_Mods_fyyy
 
-Dyson Sphere Program mods by FyisFe.
+FyisFe 的《戴森球计划》模组集合。每个模组可以独立使用，功能、依赖和安装方式见各自的说明。
 
-戴森球计划模组 by FyisFe。
+Independent mods for Dyson Sphere Program by FyisFe.
 
 ## Mods / 模组
 
-- [BlueprintSearch](BlueprintSearch/) - Search bar for the blueprint browser / 蓝图库搜索栏
-- [BuildingPosViewer](BuildingPosViewer/) - Adds x/y/z copy buttons to building inspection windows / 为建筑物检查窗口添加x/y/z复制按钮
-- [DashboardOverhaul](DashboardOverhaul/) - A series of enhancements for the in-game Dashboard / 为游戏内仪表盘提供一系列优化
-- [FastTinderLaunch](FastTinderLaunch/) - Restore old 100% dark fog tinder launch probability, toggleable via UXAssist / 恢复旧版100%黑雾火种发射概率，可在UXAssist设置面板中开关
-- [FullPhotonReceiver](FullPhotonReceiver/) - Photon-mode ray receivers always produce at full power / 光子模式射线接收站始终满功率生产
-- [InterstellarLogisticsOpt](InterstellarLogisticsOpt/) - Phase-disperses interstellar logistics scheduling to flatten CPU spikes / 相位分散星际物流调度以削平卡顿
-- [LoadMemProfiler](LoadMemProfiler/) - Diagnostic tool: records per-stage memory metrics during save loading / 诊断工具：记录读档各阶段的内存指标
-- [PoolTrim](PoolTrim/) - Trims belt path pool slack on load, huge RAM savings for megabase saves / 读档时裁剪传送带路径池松弛，超大存档内存大幅下降
+| 模组 | 用途 |
+|---|---|
+| [BlueprintSearch](BlueprintSearch/) | 在蓝图库中搜索蓝图 |
+| [BuildingPosViewer](BuildingPosViewer/) | 查看并复制建筑的 x、y、z 坐标 |
+| [DashboardOverhaul](DashboardOverhaul/package/README.md) | 改善仪表盘的分页、图表整理和操作体验 |
+| [FastTinderLaunch](FastTinderLaunch/) | 恢复旧版 100% 黑雾火种发射概率，可在 UXAssist 中开关 |
+| [FullPhotonReceiver](FullPhotonReceiver/) | 让光子模式的射线接收站始终满功率生产 |
+| [InterstellarLogisticsOpt](InterstellarLogisticsOpt/package/README.md) | 错开星际物流调度，减轻集中计算造成的卡顿 |
+| [LoadMemProfiler](LoadMemProfiler/README.md) | 记录读档和运行时的内存变化，供排查问题使用 |
+| [PoolTrim](PoolTrim/package/README.md) | 清理多余的传送带和建筑数组容量，为大型存档节省内存 |

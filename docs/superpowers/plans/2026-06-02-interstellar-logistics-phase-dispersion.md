@@ -91,7 +91,7 @@ Run:
 Test-Path "..\DSP_Mods\AssemblyFromGame\Assembly-CSharp.dll"
 ```
 
-(Run from the repo root `C:\Users\Yi\Applications\Games\dsp\code\DSP_Mods_fyyy`;
+(Run from the repository root;
 the HintPath `..\..\DSP_Mods\...` is relative to the csproj one level deeper, so
 from repo root it is `..\DSP_Mods\...`.)
 Expected: `True`. If `False`, stop — the build cannot reference the game assembly;

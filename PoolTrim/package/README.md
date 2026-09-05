@@ -1,79 +1,107 @@
 # PoolTrim
 
-## 中文
+<details>
+<summary>中文看我</summary>
 
-**大幅降低超大存档的内存占用**：读档时把每条传送带路径（CargoPath）的缓冲区容量裁剪到实际使用长度。无配置项，装上即生效；实测 45GB 存档读档内存 122GB → 76GB。
+PoolTrim 在读档时清理传送带路径和建筑数据中多余的预留空间，降低大型存档的内存占用。
 
-### 原理
+### 900w糖存档实测
 
-游戏不逐格模拟传送带，而是把首尾相连、中间无分叉的一串带子合并成一条"路径"（`CargoPath`）整体处理（遇到分流器、汇入点就断开成新路径）。每条路径按**点位**存储数据，一格传送带对应约 30 个点位（点位是货物定位的最小单位），每个点位需要 3 份并行数组共 **29 字节**：
+存档大小 **46.68 GB**，包含 **266 个已建厂星球**。同一存档的两次运行对比如下：
 
-| 数组 | 内容 | 每点字节 |
-|------|------|---------|
-| `buffer` | 货物占位状态 | 1 |
-| `pointPos` | 点位世界坐标 (Vector3) | 12 |
-| `pointRot` | 点位朝向 (Quaternion) | 16 |
+| 指标 | 未启用 | 启用 |
+|---|---:|---:|
+| 读档后进程提交内存 | 131.04 GB | **78.41 GB** |
+| 传送带路径数组容量 | 66.21 GB | **20.72 GB** |
+| 实体及伴随数组容量 | 18.66 GB | **15.90 GB** |
+| 路径点位利用率 | 31.3% | **100%** |
 
-这些数组按路径的**容量**（capacity）分配，而实际数据只占**长度**（bufferLength）。容量只增不减：
+传送带路径回收约 **45.49 GB**，实体及伴随数组回收约 **2.76 GB**，合计减少约 **48.25 GB 数组容量**。
 
-- 铺带延长路径时容量按需扩张；
-- **切断/拆除/合并传送带时，拆分出的路径保留原路径的大容量**——这是浪费的主要来源；
-- 存档时会把这个虚高的容量数字原样写入存档（但数据本体只写长度部分）；
-- 读档时 `CargoPath.Import` 先按存档里的容量数字全额分配三份数组，再只填入长度部分的数据。
+### 优化原理
 
-于是一个反复改造过的老基地，容量与实际长度的比值会越滚越大。实测一个 45GB 的存档（266 颗已建设行星、2350 万格传送带合并为 123 万条路径）：**点位总容量 22.8 亿，实际使用仅 7.1 亿（31%）**，即 22.8 亿 × 29B 中有 **42GB 是纯浪费**——分配了、提交了物理内存/页面文件，但永远不会被读写。
+#### 传送带路径：实际长度与预留容量
 
-### 本 mod 的做法
+游戏会把连续的一段传送带合并成一条路径（`CargoPath`），沿路径划分点位来记录货物的位置。每个点位对应三份并行数组，合计 **29 字节**：
 
-Harmony postfix 挂在 `CargoPath.Import` 上：每条路径导入完成后，若容量 > 长度，就调用**游戏原版的** `SetCapacity(长度)` 缩容一次。旧的大数组随读档过程被 GC 回收。
+| 数组 | 内容 | 每个点位占用 |
+|---|---|---:|
+| `buffer` | 货物占位状态 | 1 字节 |
+| `pointPos` | 点位坐标（Vector3） | 12 字节 |
+| `pointRot` | 点位朝向（Quaternion） | 16 字节 |
 
-### 为什么安全
+这里有两个不同的长度：**实际长度**是路径正在使用的点位数，**容量**是数组已经分配的位置数。
 
-- `SetCapacity` 是原版自带的重分配函数（按新旧容量的较小值拷贝），所有活数据都在长度之内，缩容不丢任何东西；
-- 之后再铺带需要扩容时，走的是原版按需扩容的老路，与新建路径行为完全一致；
-- 只在读档时干预一次，不碰运行时逻辑、不改存档格式；卸载 mod 无任何残留；
-- 附带的好处：裁剪后的容量会随下次存档写入，此后即使移除本 mod，该存档读档也不再膨胀。
+1. 铺带延长路径时，游戏会扩大数组容量。
+2. 拆带、切断路径后，路径变短，已有数组仍会保留原来的容量；复用旧路径对象时，也会沿用其预留空间。
+3. 保存时，游戏只写入实际长度内的数据，同时把容量数值写进存档。
+4. 读档时，游戏先按存档中的容量分配三份数组，再填入实际数据。
 
-### 实测（45GB 存档，64GB 内存机器）
+因此，老工厂经过多次改造后，数组可能远大于实际需要。这个900w糖存档的路径总容量约 **22.83 亿点**，实际只用了 **7.14 亿点**，其余约 **15.69 亿点**都占着数组空间。
 
-| 指标 | 无 mod | 有 mod |
-|------|--------|--------|
-| 进程提交内存峰值 | 122GB | **76GB（−38%）** |
-| 读档时间 | 216 秒 | **177 秒**（分页减少，反而更快）|
-| 路径点位利用率 | 31% | 100% |
+PoolTrim 在 `CargoPath.Import` 完成后，调用游戏自己的 `SetCapacity(实际长度)`，把三份数组一起缩到实际使用范围。有效数据复制到较小的数组，旧数组随后由垃圾回收器回收。
 
-## English
+#### 实体及伴随数组：按同一编号一起缩容
 
-**Slashes RAM usage of huge saves** by trimming each belt path (`CargoPath`) buffer down to its actually-used length at load time. No config, works out of the box; measured 122GB → 76GB load RAM on a 45GB save.
+每座建筑都有一个实体编号。建筑本身的数据，以及它的动画、状态标记、连接关系等，分别存放在多份数组中，使用同一编号索引。例如，编号为 1000 的建筑，会使用实体、动画和状态标记数组的第 1000 项。
+
+这组数据包括实体、动画、状态标记、连接数组，以及互斥锁引用、需求引用和回收编号数组，合计每个容量槽位 **384 字节**。
+
+PoolTrim 保留整段已用编号范围，同步裁剪这些数组后面的空闲尾部。中间已经拆除的建筑留下的空位，仍由原有回收列表管理；现有编号、连接数据和回收顺序保持原样。
+
+实体数组裁剪时会额外预留已用编号范围 **12.5%** 的空间，至少保留 **1024 个空槽**；能够回收原容量至少 **12.5%** 时才执行整组复制。在这个存档中，172 个工厂满足条件，共回收约 **718.30 万个实体槽位**。
+
+</details>
+
+<details>
+<summary>README</summary>
+
+PoolTrim reduces memory use in large saves by trimming unused belt-path and building-data capacity during loading.
+
+### 9M white-science save results
+
+The save file is **46.68 GB** and contains **266 planets with factories**. Two runs of the same save compare as follows:
+
+| Metric | Without PoolTrim | With PoolTrim |
+|---|---:|---:|
+| Post-load process commit | 131.04 GB | **78.41 GB** |
+| Belt-path array capacity | 66.21 GB | **20.72 GB** |
+| Entity and companion array capacity | 18.66 GB | **15.90 GB** |
+| Path-point utilization | 31.3% | **100%** |
+
+Belt paths reclaim about **45.49 GB**, and entity and companion arrays reclaim about **2.76 GB**, reducing total array capacity by approximately **48.25 GB**.
 
 ### How it works
 
-The game doesn't simulate belts tile by tile — an unbranched run of connected belts is merged into one *path* (`CargoPath`), split at splitters and merge points. Each path stores per-point data in three parallel arrays, **29 bytes per point**: `buffer` (cargo occupancy, 1B), `pointPos` (Vector3, 12B), `pointRot` (Quaternion, 16B). One belt tile spans ~30 points (points are the finest unit of cargo positioning).
+#### Belt paths: used length and reserved capacity
 
-These arrays are allocated at the path's **capacity**, while real data only fills its **length**. Capacity never shrinks:
+The game groups a continuous run of belts into a path (`CargoPath`), divided into points that track cargo positions. Each point has entries in three parallel arrays, totaling **29 bytes**:
 
-- extending a belt grows capacity on demand;
-- **cutting/removing/merging belts leaves the split paths with the original path's large capacity** — the main source of waste;
-- saving writes this inflated capacity number into the save file (though only the length's worth of data);
-- loading (`CargoPath.Import`) allocates all three arrays at the saved capacity, then fills only the length.
+| Array | Contents | Bytes per point |
+|---|---|---:|
+| `buffer` | Cargo occupancy | 1 byte |
+| `pointPos` | Point position (Vector3) | 12 bytes |
+| `pointRot` | Point orientation (Quaternion) | 16 bytes |
 
-So a long-lived, heavily-rebuilt base accumulates slack indefinitely. Measured on a 45GB save (266 built-up planets, 23.5M belt tiles merged into 1.23M paths): **2.28 billion points of capacity vs. 714 million actually used (31%)** — **42GB of committed memory that is never read or written**.
+Two different sizes matter: **length** is the number of points the path uses, while **capacity** is the number of slots already allocated.
 
-### What the mod does
+1. Extending a belt grows its array capacity.
+2. Removing belts or cutting a path shortens it, while existing arrays retain their capacity. Reused path objects also retain their reserved space.
+3. Saving writes only the data within the used length, along with the capacity value.
+4. Loading allocates all three arrays at the saved capacity, then fills them with the actual data.
 
-A Harmony postfix on `CargoPath.Import`: after each path is imported, if capacity > length, call the **vanilla** `SetCapacity(length)` once. The old oversized arrays are garbage-collected as loading proceeds.
+After repeated rebuilding, an old factory can have far more allocated space than it uses. This 9M save has about **2.283 billion points of capacity**, but uses only **714 million points**, leaving approximately **1.569 billion points** of unused array space.
 
-### Why it's safe
+After `CargoPath.Import` finishes, PoolTrim calls the game's own `SetCapacity(actual length)` to shrink all three arrays to the used range. Valid data is copied into smaller arrays, and the garbage collector reclaims the old arrays.
 
-- `SetCapacity` is the game's own resize routine (copies `min(old, new)`); all live data lies within the length, so nothing is lost;
-- later belt edits re-grow capacity through the exact same vanilla on-demand path as a fresh belt would;
-- it intervenes once at load time only — no runtime logic touched, no save format changes, remove anytime with zero residue;
-- bonus: the trimmed capacity is written into your next save, so that save loads lean even without the mod.
+#### Entity and companion arrays: resizing by shared IDs
 
-### Measured (45GB save, 64GB RAM machine)
+Each building has an entity ID. Its main data, animation, status signs and connections are stored in separate arrays indexed by that same ID. For example, building 1000 uses entry 1000 in the entity, animation and sign arrays.
 
-| Metric | Without | With |
-|--------|---------|------|
-| Peak committed memory | 122GB | **76GB (−38%)** |
-| Load time | 216s | **177s** (less paging — actually faster) |
-| Path point utilization | 31% | 100% |
+This group includes entity, animation, sign and connection arrays, plus mutex references, demand references and recycled IDs. Together, they occupy **384 bytes per capacity slot**.
+
+PoolTrim preserves the entire used ID range and trims the unused tails of these arrays together. Holes left by demolished buildings remain managed by the existing recycle list; IDs, connection data and recycle order stay intact.
+
+Entity trimming reserves an additional **12.5%** of the used ID range, with at least **1,024 spare slots**. The group is copied when trimming can reclaim at least **12.5%** of its original capacity. In this save, 172 factories met that threshold, reclaiming approximately **7.183 million entity slots**.
+
+</details>

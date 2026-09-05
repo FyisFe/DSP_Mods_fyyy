@@ -1,12 +1,12 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using BepInEx;
+using BepInEx.Bootstrap;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using HarmonyLib;
@@ -19,180 +19,299 @@ namespace LoadMemProfiler
     {
         public const string GUID = "fyyy.dsp.loadmemprofiler";
         public const string NAME = "LoadMemProfiler";
-        public const string VERSION = "0.2.0";
-
+        public const string VERSION = "0.3.1";
         internal static ManualLogSource Log;
-        internal static LoadMemProfilerPlugin Instance;
-
+        private static LoadMemProfilerPlugin _instance;
         internal static ConfigEntry<bool> Enabled;
-        internal static ConfigEntry<int> PostLoadSeconds;
-        internal static ConfigEntry<float> PostLoadIntervalSeconds;
+        internal static volatile bool Failed;
+        private ConfigEntry<int> _postLoadSeconds, _snapshotInterval;
+        private ConfigEntry<float> _postLoadInterval, _runtimeInterval;
+        private ConfigEntry<bool> _automaticSnapshots;
+        private ConfigEntry<KeyboardShortcut> _captureKey;
+        internal static volatile ProfileSession Current;
+        private ProfileSession _observed;
+        private CapacitySnapshot _snapshot;
+        private readonly FrameWindow _frames = new FrameWindow();
+        private double _lastFrame, _lastSample, _runtimeStart, _nextSnapshot, _lastEdit;
+        private long _lastTick;
+        private long _buildCalls, _removeCalls;
+        private int _planet, _loadedPlanet, _star;
+        private CaptureReason _pending;
+        private Harmony _harmony;
 
         private void Awake()
         {
-            Instance = this;
+            _instance = this;
             Log = Logger;
-
-            Enabled = Config.Bind("General", "Enabled", true,
-                "Record memory profile during game-save loading.");
-            PostLoadSeconds = Config.Bind("General", "PostLoadSeconds", 120,
-                "How many seconds to keep sampling after loading finishes (captures async model/render building).");
-            PostLoadIntervalSeconds = Config.Bind("General", "PostLoadIntervalSeconds", 1.0f,
-                "Sampling interval in seconds for the post-load phase.");
-
-            Harmony.CreateAndPatchAll(typeof(Patches), GUID);
-            Log.LogInfo("LoadMemProfiler ready.");
+            Enabled = Config.Bind("General", "Enabled", true, "Record load and runtime memory diagnostics.");
+            _postLoadSeconds = Config.Bind("General", "PostLoadSeconds", 120, new ConfigDescription(
+                "Use the faster sampling interval for this many seconds after runtime starts.", new AcceptableValueRange<int>(0, 3600)));
+            _postLoadInterval = Config.Bind("General", "PostLoadIntervalSeconds", 1f, new ConfigDescription(
+                "Memory sample interval immediately after loading.", new AcceptableValueRange<float>(0.1f, 60f)));
+            _runtimeInterval = Config.Bind("Runtime", "SampleIntervalSeconds", 5f, new ConfigDescription(
+                "Runtime memory and frame-time sample interval.", new AcceptableValueRange<float>(1f, 60f)));
+            _automaticSnapshots = Config.Bind("Runtime", "AutomaticSnapshots", false,
+                "Enable start, periodic and event capacity scans. Keep disabled on memory-constrained saves; F8 still works.");
+            _snapshotInterval = Config.Bind("Runtime", "SnapshotIntervalSeconds", 300, new ConfigDescription(
+                "Automatic capacity scan interval (minimum 30 seconds); 0 disables periodic scans. Event/manual scans remain enabled.",
+                new AcceptableValueRange<int>(0, 3600)));
+            _captureKey = Config.Bind("Runtime", "CaptureKey", new KeyboardShortcut(KeyCode.F8), "Start or cancel a capacity snapshot.");
+            _harmony = Harmony.CreateAndPatchAll(typeof(Patches), GUID);
+            Log.LogInfo("LoadMemProfiler ready. Automatic snapshots: " + _automaticSnapshots.Value + "; start/cancel key: " + _captureKey.Value);
         }
 
-        internal void StartPostLoadSampling(ProfileSession session)
+        internal static ProfileSession StartSession(string kind, string name)
         {
-            StartCoroutine(PostLoadSampling(session));
-        }
-
-        private IEnumerator PostLoadSampling(ProfileSession session)
-        {
-            float interval = Mathf.Max(0.1f, PostLoadIntervalSeconds.Value);
-            int total = Mathf.Max(0, PostLoadSeconds.Value);
-            float elapsed = 0f;
-            while (elapsed < total)
+            StopSession("session_replaced");
+            if (!Enabled.Value || Failed) return null;
+            try
             {
-                yield return new WaitForSecondsRealtime(interval);
-                elapsed += interval;
-                try
+                var session = new ProfileSession(kind, name);
+                Current = session;
+                WriteMetadata(session);
+                session.Record("session_begin", name, true);
+                Log.LogInfo("LoadMemProfiler: " + session.FilePath);
+                return session;
+            }
+            catch (Exception e)
+            {
+                Warn(e);
+                StopSession("start_failed");
+                return null;
+            }
+        }
+
+        internal static void StopSession(string reason)
+        {
+            _instance?.CancelSnapshot();
+            var session = Current;
+            Current = null;
+            if (session == null) return;
+            session.Record(reason, "", true);
+            session.Dispose();
+        }
+
+        internal static void Warn(Exception e)
+        {
+            if (Failed) return;
+            Failed = true;
+            Log.LogWarning("LoadMemProfiler stopped diagnostics until restart: " + e);
+        }
+
+        private void LateUpdate()
+        {
+            long started = Stopwatch.GetTimestamp();
+            try
+            {
+                if (!Enabled.Value || Failed) { StopSession("disabled"); CancelSnapshot(); return; }
+                if (_snapshot != null && !ReferenceEquals(_snapshot.Session, Current)) CancelSnapshot();
+                if (Current != null && Current.Loading) return;
+                if (!GameMain.isRunning || DSPGame.IsMenuDemo || GameMain.data == null) return;
+                if (Current == null || (Current.Data != null && !ReferenceEquals(Current.Data, GameMain.data)))
+                    StartSession("runtime", GameMain.data.gameName);
+                var session = Current;
+                if (session == null) return;
+                double now = session.Seconds;
+                if (!ReferenceEquals(_observed, session))
                 {
-                    session.RecordAndAppend("postload", "");
+                    CancelSnapshot();
+                    _observed = session;
+                    session.Data = GameMain.data;
+                    _frames.Reset();
+                    _lastFrame = _lastSample = _runtimeStart = now;
+                    _lastTick = GameMain.gameTick;
+                    _buildCalls = _removeCalls = 0;
+                    _planet = _loadedPlanet = _star = -1;
+                    _nextSnapshot = 0;
+                    _lastEdit = -10;
+                    _pending = CaptureReason.Start;
+                    session.Record("runtime_begin", "", true);
                 }
-                catch (Exception e)
+                else _frames.Add((now - _lastFrame) * 1000);
+                _lastFrame = now;
+                int planet = session.Data.localPlanet?.id ?? 0;
+                int loaded = session.Data.localLoadedPlanetFactory?.planetId ?? 0;
+                int star = session.Data.localStar?.id ?? 0;
+                session.Tick = GameMain.gameTick;
+                session.Planet = planet; session.LoadedPlanet = loaded; session.Star = star;
+                session.Paused = GameMain.isPaused;
+                if (planet != _planet || loaded != _loadedPlanet || star != _star)
                 {
-                    Log.LogWarning("post-load sampling stopped: " + e.Message);
-                    yield break;
+                    session.Record("location_changed", _planet + ":" + _loadedPlanet + ":" + _star + " -> " + planet + ":" + loaded + ":" + star, true);
+                    _planet = planet; _loadedPlanet = loaded; _star = star;
+                    _pending |= CaptureReason.Location;
+                }
+                long builds = Interlocked.Read(ref session.BuildCalls);
+                long removes = Interlocked.Read(ref session.RemoveCalls);
+                if (builds != _buildCalls || removes != _removeCalls)
+                {
+                    _buildCalls = builds; _removeCalls = removes;
+                    _lastEdit = now;
+                    _pending |= CaptureReason.Edits;
+                }
+                if (Interlocked.Exchange(ref session.SavesCompleted, 0) > 0) _pending |= CaptureReason.Save;
+                if (_captureKey.Value.IsDown())
+                {
+                    if (_snapshot != null || (_pending & CaptureReason.Manual) != 0)
+                    {
+                        CancelSnapshot();
+                        _pending = 0;
+                        session.NextEventScan = now + 30;
+                        _nextSnapshot = now + Math.Max(30, _snapshotInterval.Value);
+                        Log.LogInfo("LoadMemProfiler capacity capture cancelled.");
+                        return;
+                    }
+                    _pending |= CaptureReason.Manual;
+                }
+                double interval = now - _runtimeStart < _postLoadSeconds.Value ? _postLoadInterval.Value : _runtimeInterval.Value;
+                if (now - _lastSample >= interval)
+                {
+                    session.Record("runtime", "add_calls=" + builds + " remove_calls=" + removes, true,
+                        _frames.Columns((GameMain.gameTick - _lastTick) / (now - _lastSample)),
+                        UnityEngine.Profiling.Profiler.GetTotalAllocatedMemoryLong() + "\t" +
+                        UnityEngine.Profiling.Profiler.GetTotalReservedMemoryLong() + "\t" +
+                        UnityEngine.Profiling.Profiler.GetTotalUnusedReservedMemoryLong());
+                    _frames.Reset();
+                    _lastSample = now;
+                    _lastTick = GameMain.gameTick;
+                }
+                if (Failed) return;
+                if (_snapshotInterval.Value > 0 && now >= _nextSnapshot) _pending |= CaptureReason.Periodic;
+                if (!_automaticSnapshots.Value) _pending &= CaptureReason.Manual;
+                if (Volatile.Read(ref session.Saving) > 0) return;
+                if (_snapshot == null && _pending != 0 &&
+                    ((_pending & (CaptureReason.Start | CaptureReason.Manual)) != 0 ||
+                     (now >= session.NextEventScan && (now - _lastEdit >= 5 || (_pending & ~CaptureReason.Edits) != 0))))
+                {
+                    _snapshot = new CapacitySnapshot(session, _pending.ToString());
+                    _pending = 0;
+                    _nextSnapshot = double.PositiveInfinity;
+                }
+                if (_snapshot != null && !_snapshot.Step())
+                {
+                    _snapshot.Dispose();
+                    _snapshot = null;
+                    session.NextEventScan = session.Seconds + 30;
+                    _nextSnapshot = session.Seconds + Math.Max(30, _snapshotInterval.Value);
                 }
             }
-            Log.LogInfo("LoadMemProfiler: post-load sampling finished -> " + session.FilePath);
+            catch (Exception e)
+            {
+                // A failed diagnostic must never interrupt simulation or trigger a per-frame retry.
+                Warn(e);
+                CancelSnapshot();
+                StopSession("diagnostic_error");
+            }
+            finally { _frames.ObserverMs += (Stopwatch.GetTimestamp() - started) * 1000.0 / Stopwatch.Frequency; }
+        }
+
+        private void CancelSnapshot()
+        {
+            var snapshot = _snapshot;
+            _snapshot = null;
+            try { snapshot?.Dispose(); } catch (Exception e) { Warn(e); }
+        }
+
+        private void OnDestroy()
+        {
+            CancelSnapshot();
+            StopSession("plugin_destroyed");
+            _observed = null;
+            _harmony?.UnpatchSelf();
+            _instance = null;
+        }
+
+        private static void WriteMetadata(ProfileSession session)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("schema=3");
+            sb.AppendLine("profiler=" + VERSION);
+            sb.AppendLine("game=" + GameConfig.gameVersion);
+            sb.AppendLine("unity=" + Application.unityVersion);
+            sb.AppendLine("clr=" + Environment.Version + " pointer_bytes=" + IntPtr.Size + " gc_max_generation=" + GC.MaxGeneration);
+            sb.AppendLine("game_mvid=" + typeof(GameMain).Module.ModuleVersionId);
+            sb.AppendLine("profiler_mvid=" + typeof(LoadMemProfilerPlugin).Module.ModuleVersionId);
+            foreach (var plugin in Chainloader.PluginInfos.Values)
+                sb.AppendLine("plugin=" + Tsv.Cell(plugin.Metadata.GUID) + " " + plugin.Metadata.Version);
+            File.WriteAllText(session.Stem + "_metadata.txt", sb.ToString());
         }
     }
+
+    [Flags]
+    internal enum CaptureReason { Start = 1, Periodic = 2, Location = 4, Edits = 8, Save = 16, Manual = 32 }
 
     internal struct Sample
     {
-        public double T;
-        public string Event;
-        public string Detail;
-        public long FileBytes;
-        public long GcLive;
-        public long MonoHeap;
-        public long MonoUsed;
-        public long Commit;
-        public long WorkingSet;
+        public long GcUsed, MonoHeap, MonoUsed, Commit, WorkingSet, PageFaults;
+        public int Gc0, Gc1, Gc2;
     }
 
-    internal class ProfileSession
+    internal sealed class ProfileSession : IDisposable
     {
-        private readonly Stopwatch _sw = Stopwatch.StartNew();
-        private readonly List<Sample> _rows = new List<Sample>(32768);
-        private readonly string _saveName;
+        private readonly Stopwatch _clock = Stopwatch.StartNew();
+        private readonly object _gate = new object();
+        private StreamWriter _writer;
+        internal readonly string Stem;
+        internal string FilePath => Stem + ".tsv";
+        internal double Seconds => _clock.Elapsed.TotalSeconds;
+        internal volatile bool Loading;
+        internal volatile GameData Data;
+        internal long Tick = -1;
+        internal int Planet, LoadedPlanet, Star;
+        internal bool Paused;
         internal Stream SaveStream;
-        public string FilePath { get; private set; }
+        internal long BuildCalls, RemoveCalls;
+        internal int Saving, SavesCompleted, SnapshotId;
+        internal double NextEventScan;
 
-        public ProfileSession(string saveName)
+        internal ProfileSession(string kind, string name)
         {
-            _saveName = saveName;
-            Record("session_begin", saveName);
-        }
-
-        public void Record(string evt, string detail)
-        {
-            Sample s = MemMetrics.Capture();
-            s.T = _sw.Elapsed.TotalSeconds;
-            s.Event = evt;
-            s.Detail = detail;
-            Stream stream = SaveStream;
-            try
-            {
-                s.FileBytes = stream != null && stream.CanRead ? stream.Position : -1L;
-            }
-            catch
-            {
-                s.FileBytes = -1L;
-            }
-            _rows.Add(s);
-        }
-
-        public void Finish()
-        {
-            Record("session_end", _saveName);
-            SaveStream = null;
-
+            Loading = kind == "load";
             string dir = Path.Combine(Paths.BepInExRootPath, "LoadMemProfiler");
             Directory.CreateDirectory(dir);
-            string safeName = _saveName;
-            foreach (char c in Path.GetInvalidFileNameChars())
-                safeName = safeName.Replace(c, '_');
-            FilePath = Path.Combine(dir,
-                string.Format("load_{0}_{1:yyyyMMdd_HHmmss}.tsv", safeName, DateTime.Now));
-
-            var sb = new StringBuilder(_rows.Count * 96);
-            sb.AppendLine("t_s\tevent\tdetail\tfile_MB\tgc_live_MB\tmono_heap_MB\tmono_used_MB\tcommit_MB\tws_MB");
-            foreach (Sample s in _rows)
-                AppendRow(sb, s);
-            File.WriteAllText(FilePath, sb.ToString());
-
-            LogSummary();
-            LoadMemProfilerPlugin.Log.LogInfo("LoadMemProfiler: profile written -> " + FilePath);
+            name = Tsv.Cell(name);
+            foreach (char c in Path.GetInvalidFileNameChars()) name = name.Replace(c, '_');
+            if (name.Length > 80) name = name.Substring(0, 80);
+            Stem = Path.Combine(dir, kind + "_" + name + "_" + DateTime.UtcNow.ToString("yyyyMMdd_HHmmss_fffffff", CultureInfo.InvariantCulture));
+            _writer = new StreamWriter(new FileStream(FilePath, FileMode.CreateNew, FileAccess.Write, FileShare.Read), new UTF8Encoding(false), 65536);
+            _writer.WriteLine("t_s\tevent\tdetail\tfile_bytes\tgc_used_bytes\tmono_heap_bytes\tmono_used_bytes\tcommit_bytes\tworking_set_bytes\tpage_faults\tgc0\tgc1\tgc2\tgame_tick\tlocal_planet\tloaded_planet\tlocal_star\tpaused\tframes\tpercentile_frames\tframe_mean_ms\tframe_p95_ms\tframe_p99_ms\tframe_max_ms\tobserved_ups\tobserver_ms\tunity_allocated_bytes\tunity_reserved_bytes\tunity_unused_reserved_bytes");
         }
 
-        // Post-load samples append directly so data survives a crash of the game afterwards.
-        public void RecordAndAppend(string evt, string detail)
+        internal void Record(string evt, string detail, bool flush = false, string frames = null, string unity = null)
         {
-            Record(evt, detail);
-            if (FilePath == null)
-                return;
-            var sb = new StringBuilder(128);
-            AppendRow(sb, _rows[_rows.Count - 1]);
-            File.AppendAllText(FilePath, sb.ToString());
-        }
-
-        private static void AppendRow(StringBuilder sb, Sample s)
-        {
-            sb.Append(s.T.ToString("F3", CultureInfo.InvariantCulture)).Append('\t');
-            sb.Append(s.Event).Append('\t');
-            sb.Append(s.Detail).Append('\t');
-            sb.Append(Mb(s.FileBytes)).Append('\t');
-            sb.Append(Mb(s.GcLive)).Append('\t');
-            sb.Append(Mb(s.MonoHeap)).Append('\t');
-            sb.Append(Mb(s.MonoUsed)).Append('\t');
-            sb.Append(Mb(s.Commit)).Append('\t');
-            sb.Append(Mb(s.WorkingSet)).AppendLine();
-        }
-
-        private static string Mb(long bytes)
-        {
-            return bytes < 0 ? "-1" : (bytes / (1024.0 * 1024.0)).ToString("F1", CultureInfo.InvariantCulture);
-        }
-
-        private void LogSummary()
-        {
-            long peakCommit = 0;
-            foreach (Sample s in _rows)
-                if (s.Commit > peakCommit)
-                    peakCommit = s.Commit;
-
-            // Attribute commit growth to the interval ending at each sample, keep the largest jumps.
-            var jumps = new List<KeyValuePair<long, string>>();
-            for (int i = 1; i < _rows.Count; i++)
+            lock (_gate)
             {
-                long delta = _rows[i].Commit - _rows[i - 1].Commit;
-                if (_rows[i].Commit >= 0 && _rows[i - 1].Commit >= 0 && delta > 0)
-                    jumps.Add(new KeyValuePair<long, string>(delta,
-                        _rows[i].Event + (_rows[i].Detail.Length > 0 ? " " + _rows[i].Detail : "")));
+                if (_writer == null) return;
+                try
+                {
+                    Sample s = MemMetrics.Capture();
+                    long position = -1;
+                    try { if (SaveStream != null) position = SaveStream.Position; } catch { }
+                    _writer.WriteLine(Tsv.Number(Seconds) + "\t" + Tsv.Cell(evt) + "\t" + Tsv.Cell(detail) + "\t" + position + "\t" +
+                        s.GcUsed + "\t" + s.MonoHeap + "\t" + s.MonoUsed + "\t" + s.Commit + "\t" + s.WorkingSet + "\t" +
+                        s.PageFaults + "\t" + s.Gc0 + "\t" + s.Gc1 + "\t" + s.Gc2 + "\t" +
+                        Tick + "\t" + Planet + "\t" + LoadedPlanet + "\t" + Star + "\t" + (Paused ? 1 : 0) + "\t" +
+                        (frames ?? "-1\t-1\t-1\t-1\t-1\t-1\t-1\t-1") + "\t" + (unity ?? "-1\t-1\t-1"));
+                    if (flush) _writer.Flush();
+                }
+                catch (Exception e)
+                {
+                    LoadMemProfilerPlugin.Warn(e);
+                    Dispose();
+                }
             }
-            jumps.Sort((a, b) => b.Key.CompareTo(a.Key));
+        }
 
-            var log = LoadMemProfilerPlugin.Log;
-            log.LogInfo(string.Format("LoadMemProfiler summary for '{0}': peak commit {1} MB, {2} samples",
-                _saveName, Mb(peakCommit), _rows.Count));
-            int n = Math.Min(8, jumps.Count);
-            for (int i = 0; i < n; i++)
-                log.LogInfo(string.Format("  commit +{0} MB at {1}", Mb(jumps[i].Key), jumps[i].Value));
+        public void Dispose()
+        {
+            lock (_gate)
+            {
+                var writer = _writer;
+                _writer = null;
+                SaveStream = null;
+                Data = null;
+                try { writer?.Dispose(); } catch (Exception e) { LoadMemProfilerPlugin.Warn(e); }
+            }
         }
     }
 
@@ -234,17 +353,20 @@ namespace LoadMemProfiler
         {
             var s = new Sample
             {
-                FileBytes = -1,
-                GcLive = -1,
+                GcUsed = -1,
                 MonoHeap = -1,
                 MonoUsed = -1,
                 Commit = -1,
-                WorkingSet = -1
+                WorkingSet = -1,
+                PageFaults = -1, Gc0 = -1, Gc1 = -1, Gc2 = -1
             };
 
             try
             {
-                s.GcLive = GC.GetTotalMemory(false);
+                s.GcUsed = GC.GetTotalMemory(false);
+                s.Gc0 = GC.CollectionCount(0);
+                s.Gc1 = GC.MaxGeneration >= 1 ? GC.CollectionCount(1) : -1;
+                s.Gc2 = GC.MaxGeneration >= 2 ? GC.CollectionCount(2) : -1;
             }
             catch
             {
@@ -271,6 +393,7 @@ namespace LoadMemProfiler
                     pmc.cb = (uint) Marshal.SizeOf(typeof(PROCESS_MEMORY_COUNTERS_EX));
                     if (GetProcessMemoryInfo(GetCurrentProcess(), out pmc, pmc.cb))
                     {
+                        s.PageFaults = pmc.PageFaultCount;
                         s.Commit = (long) pmc.PrivateUsage.ToUInt64();
                         s.WorkingSet = (long) pmc.WorkingSetSize.ToUInt64();
                     }
@@ -304,231 +427,96 @@ namespace LoadMemProfiler
         }
     }
 
-    // Scans pool capacity vs. actual usage after a successful load, to attribute
-    // the file->memory amplification (capacity slack vs. inherent per-slot cost).
-    internal static class CapacityReport
-    {
-        private static readonly AccessTools.FieldRef<CargoPath, int> PathBufferLength =
-            AccessTools.FieldRefAccess<CargoPath, int>("bufferLength");
-
-        public static void WriteReport(string profilePath)
-        {
-            GameData data = GameMain.data;
-            if (data == null || data.factories == null)
-                return;
-
-            int szEntity = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<EntityData>();
-            int szAnim = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<AnimData>();
-            int szSign = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<SignData>();
-            int szCargo = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<Cargo>();
-            int szBelt = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<BeltComponent>();
-            int szInserter = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<InserterComponent>();
-            int szAssembler = Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<AssemblerComponent>();
-            // per entity slot: EntityData + AnimData + SignData + 16 conn ints + mutex ref
-            long entitySlot = szEntity + szAnim + szSign + 64 + 8;
-            const long pathSlot = 1 + 12 + 16; // buffer byte + pointPos + pointRot
-
-            long entCap = 0, entCur = 0;
-            long pathCap = 0, pathLen = 0, pathCount = 0;
-            long cargoCap = 0, cargoCur = 0;
-            long beltCap = 0, beltCur = 0;
-            long insCap = 0, insCur = 0;
-            long asmCap = 0, asmCur = 0;
-            var perFactory = new List<KeyValuePair<long, string>>();
-
-            for (int i = 0; i < data.factoryCount; i++)
-            {
-                PlanetFactory f = data.factories[i];
-                if (f == null)
-                    continue;
-                long fSlack = 0;
-                if (f.entityPool != null)
-                {
-                    entCap += f.entityPool.Length;
-                    entCur += f.entityCursor;
-                    fSlack += (f.entityPool.Length - f.entityCursor) * entitySlot;
-                }
-                CargoTraffic t = f.cargoTraffic;
-                if (t != null)
-                {
-                    if (t.pathPool != null)
-                    {
-                        for (int p = 1; p < t.pathCursor; p++)
-                        {
-                            CargoPath path = t.pathPool[p];
-                            if (path == null || path.buffer == null)
-                                continue;
-                            pathCount++;
-                            pathCap += path.buffer.Length;
-                            pathLen += PathBufferLength(path);
-                        }
-                    }
-                    if (t.container != null && t.container.cargoPool != null)
-                    {
-                        cargoCap += t.container.cargoPool.Length;
-                        cargoCur += t.container.cursor;
-                    }
-                    if (t.beltPool != null)
-                    {
-                        beltCap += t.beltPool.Length;
-                        beltCur += t.beltCursor;
-                    }
-                }
-                FactorySystem fs = f.factorySystem;
-                if (fs != null)
-                {
-                    if (fs.inserterPool != null)
-                    {
-                        insCap += fs.inserterPool.Length;
-                        insCur += fs.inserterCursor;
-                    }
-                    if (fs.assemblerPool != null)
-                    {
-                        asmCap += fs.assemblerPool.Length;
-                        asmCur += fs.assemblerCursor;
-                    }
-                }
-                if (f.planet != null)
-                    perFactory.Add(new KeyValuePair<long, string>(fSlack,
-                        string.Format("astro={0} entCap={1} entCur={2}", f.planet.astroId,
-                            f.entityPool != null ? f.entityPool.Length : 0, f.entityCursor)));
-            }
-
-            var sb = new StringBuilder(8192);
-            sb.AppendLine("== LoadMemProfiler capacity report ==");
-            sb.AppendLine(string.Format(
-                "sizeof: EntityData={0} AnimData={1} SignData={2} Cargo={3} BeltComponent={4} InserterComponent={5} AssemblerComponent={6}",
-                szEntity, szAnim, szSign, szCargo, szBelt, szInserter, szAssembler));
-            sb.AppendLine(string.Format("factories={0}", data.factoryCount));
-            Line(sb, "entity slots (pool incl. anim/sign/conn/mutex)", entCap, entCur, entitySlot);
-            Line(sb, "cargo path points (buffer+pointPos+pointRot)", pathCap, pathLen, pathSlot);
-            sb.AppendLine(string.Format("  cargo paths: {0}", pathCount));
-            Line(sb, "cargo pool (Cargo)", cargoCap, cargoCur, szCargo);
-            Line(sb, "belt pool (BeltComponent)", beltCap, beltCur, szBelt);
-            Line(sb, "inserter pool", insCap, insCur, szInserter);
-            Line(sb, "assembler pool", asmCap, asmCur, szAssembler);
-
-            perFactory.Sort((a, b) => b.Key.CompareTo(a.Key));
-            sb.AppendLine("top 10 factories by entity slack bytes:");
-            for (int i = 0; i < Math.Min(10, perFactory.Count); i++)
-                sb.AppendLine(string.Format("  {0:F0} MB  {1}",
-                    perFactory[i].Key / (1024.0 * 1024.0), perFactory[i].Value));
-
-            string reportPath = Path.ChangeExtension(profilePath, null) + "_capacity.txt";
-            File.WriteAllText(reportPath, sb.ToString());
-            LoadMemProfilerPlugin.Log.LogInfo(sb.ToString());
-            LoadMemProfilerPlugin.Log.LogInfo("LoadMemProfiler: capacity report -> " + reportPath);
-        }
-
-        private static void Line(StringBuilder sb, string name, long cap, long cur, long slotBytes)
-        {
-            double gb = 1024.0 * 1024.0 * 1024.0;
-            sb.AppendLine(string.Format(
-                "{0}: capacity={1} used={2} ({3:P0})  mem@cap={4:F2} GB  slack={5:F2} GB",
-                name, cap, cur, cap > 0 ? (double) cur / cap : 0,
-                cap * slotBytes / gb, (cap - cur) * slotBytes / gb));
-        }
-    }
-
     internal static class Patches
     {
-        internal static ProfileSession Session;
-        private static bool _errorLogged;
-
-        private static void Guarded(Action action)
-        {
-            if (Session == null)
-                return;
-            try
-            {
-                action();
-            }
-            catch (Exception e)
-            {
-                if (!_errorLogged)
-                {
-                    _errorLogged = true;
-                    LoadMemProfilerPlugin.Log.LogWarning("LoadMemProfiler sampling error (further errors muted): " + e);
-                }
-            }
-        }
+        private static volatile ProfileSession _loading;
 
         [HarmonyPrefix, HarmonyPatch(typeof(GameSave), nameof(GameSave.LoadCurrentGame))]
-        private static void LoadBegin(string saveName)
+        private static void LoadBegin(string saveName, out ProfileSession __state)
         {
-            if (!LoadMemProfilerPlugin.Enabled.Value)
-                return;
-            try
-            {
-                Session = new ProfileSession(saveName);
-            }
-            catch (Exception e)
-            {
-                Session = null;
-                LoadMemProfilerPlugin.Log.LogWarning("LoadMemProfiler failed to start session: " + e);
-            }
+            __state = LoadMemProfilerPlugin.StartSession("load", saveName);
+            _loading = __state;
         }
 
         [HarmonyFinalizer, HarmonyPatch(typeof(GameSave), nameof(GameSave.LoadCurrentGame))]
-        private static void LoadEnd(Exception __exception)
+        private static void LoadEnd(ProfileSession __state, bool __result, Exception __exception)
         {
-            ProfileSession session = Session;
-            Session = null;
-            if (session == null)
-                return;
-            try
-            {
-                if (__exception != null)
-                    session.Record("load_exception", __exception.GetType().Name);
-                session.Finish();
-                if (__exception == null)
-                    CapacityReport.WriteReport(session.FilePath);
-                LoadMemProfilerPlugin.Instance.StartPostLoadSampling(session);
-            }
-            catch (Exception e)
-            {
-                LoadMemProfilerPlugin.Log.LogWarning("LoadMemProfiler failed to write profile: " + e);
-            }
+            if (__state == null) return;
+            if (ReferenceEquals(_loading, __state)) _loading = null;
+            __state.SaveStream = null;
+            __state.Loading = false;
+            __state.Record(__result && __exception == null ? "load_end" : "load_failed", __exception?.GetType().Name ?? "", true);
+            if ((!__result || __exception != null) && ReferenceEquals(LoadMemProfilerPlugin.Current, __state))
+                LoadMemProfilerPlugin.StopSession("load_failed_end");
         }
 
         [HarmonyPostfix, HarmonyPatch(typeof(PerformanceMonitor), nameof(PerformanceMonitor.BeginStream))]
         private static void BeginStream(Stream str)
         {
-            Guarded(() => Session.SaveStream = str);
+            var session = _loading;
+            if (session != null) session.SaveStream = str;
         }
 
         [HarmonyPostfix, HarmonyPatch(typeof(PerformanceMonitor), nameof(PerformanceMonitor.EndStream))]
         private static void EndStream()
         {
-            Guarded(() => Session.SaveStream = null);
+            var session = _loading;
+            if (session != null) session.SaveStream = null;
         }
 
         [HarmonyPostfix, HarmonyPatch(typeof(PerformanceMonitor), nameof(PerformanceMonitor.BeginData))]
-        private static void BeginData(ESaveDataEntry entry)
-        {
-            Guarded(() => Session.Record("data_begin:" + entry, ""));
-        }
+        private static void BeginData(ESaveDataEntry entry) => _loading?.Record("data_begin:" + entry, "");
 
         [HarmonyPostfix, HarmonyPatch(typeof(PerformanceMonitor), nameof(PerformanceMonitor.EndData))]
-        private static void EndData(ESaveDataEntry entry)
-        {
-            Guarded(() => Session.Record("data_end:" + entry, ""));
-        }
+        private static void EndData(ESaveDataEntry entry) => _loading?.Record("data_end:" + entry, "");
 
         [HarmonyPostfix, HarmonyPatch(typeof(PlanetFactory), nameof(PlanetFactory.Import))]
-        private static void FactoryImported(PlanetFactory __instance)
-        {
-            Guarded(() => Session.Record("factory", string.Format("idx={0} astro={1} entities={2}",
-                __instance.index,
-                __instance.planet != null ? __instance.planet.astroId : 0,
-                __instance.entityCursor)));
-        }
+        private static void FactoryImported(PlanetFactory __instance) => _loading?.Record("factory", "index=" + __instance.index + " planet=" + (__instance.planet?.id ?? 0));
 
         [HarmonyPostfix, HarmonyPatch(typeof(DysonSphere), nameof(DysonSphere.Import))]
-        private static void DysonSphereImported(DysonSphere __instance)
+        private static void SphereImported(DysonSphere __instance) => _loading?.Record("dyson_sphere", "star=" + (__instance.starData?.id ?? 0));
+
+        internal sealed class SaveProbe { internal ProfileSession Session; internal long Start; }
+
+        [HarmonyPrefix, HarmonyPatch(typeof(GameSave), nameof(GameSave.SaveCurrentGame))]
+        private static void SaveBegin(string saveName, out SaveProbe __state)
         {
-            Guarded(() => Session.Record("dyson_sphere",
-                "star=" + (__instance.starData != null ? __instance.starData.index.ToString() : "?")));
+            var session = LoadMemProfilerPlugin.Current;
+            __state = null;
+            if (session == null || session.Loading) return;
+            __state = new SaveProbe { Session = session, Start = Stopwatch.GetTimestamp() };
+            Interlocked.Increment(ref session.Saving);
+            session.Record("save_begin", saveName, true);
         }
+
+        [HarmonyFinalizer, HarmonyPatch(typeof(GameSave), nameof(GameSave.SaveCurrentGame))]
+        private static void SaveEnd(SaveProbe __state, bool __result, Exception __exception)
+        {
+            if (__state == null) return;
+            var session = __state.Session;
+            session.Record(__result && __exception == null ? "save_end" : "save_failed",
+                "duration_ms=" + Tsv.Number((Stopwatch.GetTimestamp() - __state.Start) * 1000.0 / Stopwatch.Frequency) +
+                " exception=" + (__exception?.GetType().Name ?? ""), true);
+            Interlocked.Decrement(ref session.Saving);
+            Interlocked.Increment(ref session.SavesCompleted);
+        }
+
+        [HarmonyPostfix, HarmonyPatch(typeof(PlanetFactory), nameof(PlanetFactory.AddEntityData))]
+        private static void EntityAdded(PlanetFactory __instance)
+        {
+            var session = LoadMemProfilerPlugin.Current;
+            if (session?.Data != null && ReferenceEquals(session.Data, __instance.gameData)) Interlocked.Increment(ref session.BuildCalls);
+        }
+
+        [HarmonyPostfix, HarmonyPatch(typeof(PlanetFactory), nameof(PlanetFactory.RemoveEntityWithComponents))]
+        private static void EntityRemoved(PlanetFactory __instance)
+        {
+            var session = LoadMemProfilerPlugin.Current;
+            if (session?.Data != null && ReferenceEquals(session.Data, __instance.gameData)) Interlocked.Increment(ref session.RemoveCalls);
+        }
+
+        // End saves the last-exit file before destroying game data; retain its save markers.
+        [HarmonyFinalizer, HarmonyPatch(typeof(GameMain), nameof(GameMain.End))]
+        private static void GameEnded() => LoadMemProfilerPlugin.StopSession("game_end");
     }
 }
