@@ -15,4 +15,4 @@ Independent mods for Dyson Sphere Program by FyisFe.
 | [FullPhotonReceiver](FullPhotonReceiver/) | 让光子模式的射线接收站始终满功率生产 |
 | [InterstellarLogisticsOpt](InterstellarLogisticsOpt/package/README.md) | 错开星际物流调度，减轻集中计算造成的卡顿 |
 | [LoadMemProfiler](LoadMemProfiler/README.md) | 记录读档和运行时的内存变化，供排查问题使用 |
-| [PoolTrim](PoolTrim/package/README.md) | 清理多余的传送带和建筑数组容量，为大型存档节省内存 |
+| [PoolTrim](PoolTrim/package/README.md) | 裁剪传送带和建筑数组容量，可选路径几何无损冷存（默认关闭） |

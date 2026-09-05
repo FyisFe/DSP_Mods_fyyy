@@ -6,19 +6,31 @@ using HarmonyLib;
 namespace PoolTrim
 {
     [BepInPlugin(GUID, NAME, VERSION)]
+    [BepInDependency("starfi5h.plugin.LossyCompression", BepInDependency.DependencyFlags.SoftDependency)]
     public class PoolTrimPlugin : BaseUnityPlugin
     {
         public const string GUID = "fyyy.dsp.pooltrim";
         public const string NAME = "PoolTrim";
-        public const string VERSION = "1.1.1";
+        public const string VERSION = "1.2.0";
 
         internal static ManualLogSource Log;
+        internal static bool ColdGeometry;
 
         private void Awake()
         {
             Log = Logger;
+            // Capture at startup: changing the file must not disable readers of existing cold paths.
+            ColdGeometry = Config.Bind("Performance", "ColdGeometry", false,
+                "Losslessly compress belt-path geometry in RAM. Reduces memory use but increases load time. Requires game restart.\n" +
+                "在内存中无损压缩传送带路径几何，降低内存占用，但增加读档耗时。修改后需重启游戏。").Value;
+            if (ColdGeometry)
+            {
+                PathGeometry.Initialize();
+                // Install every geometry reader before enabling import-time cold storage.
+                GeometryPatches.Install(new Harmony(GUID));
+            }
             Harmony.CreateAndPatchAll(typeof(Patches), GUID);
-            Log.LogInfo("PoolTrim ready.");
+            Log.LogInfo("PoolTrim ready. ColdGeometry:" + ColdGeometry);
         }
     }
 
@@ -43,6 +55,7 @@ namespace PoolTrim
         private static void LoadBegin()
         {
             TrimmedPoints = _trimmedEntities = 0;
+            PathGeometry.ResetTotals();
             _trimmedFactories = 0;
             _errorLogged = false;
             _loading = true;
@@ -51,18 +64,20 @@ namespace PoolTrim
         // Saves record each path's grown capacity (splits/merges/rebuilds keep the old
         // size), so megabase saves allocate ~3x the points they actually use. Trim right
         // after import; later belt edits re-grow on demand via the vanilla SetCapacity path.
-        [HarmonyPostfix, HarmonyPatch(typeof(CargoPath), nameof(CargoPath.Import))]
+        [HarmonyPostfix, HarmonyPriority(Priority.Last), HarmonyPatch(typeof(CargoPath), nameof(CargoPath.Import))]
         private static void TrimAfterImport(CargoPath __instance)
         {
             try
             {
-                int target = BufferLength(__instance);
+                // Zero capacity would leave vanilla's doubling loop stuck on an empty reused path.
+                int target = Math.Max(1, BufferLength(__instance));
                 if (__instance.buffer != null && __instance.buffer.Length > target)
                 {
                     int removed = __instance.buffer.Length - target;
                     __instance.SetCapacity(target);
                     TrimmedPoints += removed;
                 }
+                if (_loading && PoolTrimPlugin.ColdGeometry) PathGeometry.Store(__instance);
             }
             catch (Exception e)
             {
@@ -137,12 +152,13 @@ namespace PoolTrim
             if (!__result || __exception != null) return;
             if (TrimmedPoints > 0)
                 PoolTrimPlugin.Log.LogInfo(string.Format(
-                    "PoolTrim: trimmed {0} cargo path points, ~{1:F2} GiB saved",
-                    TrimmedPoints, TrimmedPoints * 29.0 / (1024.0 * 1024.0 * 1024.0)));
+                    "PoolTrim: trimmed {0} cargo path points, ~{1:F2} GB saved",
+                    TrimmedPoints, TrimmedPoints * 29.0 / 1e9));
             if (_trimmedEntities > 0)
                 PoolTrimPlugin.Log.LogInfo(string.Format(
                     "PoolTrim: trimmed {0} entity slots across {1} factories (including companion arrays)",
                     _trimmedEntities, _trimmedFactories));
+            if (PoolTrimPlugin.ColdGeometry) PoolTrimPlugin.Log.LogInfo(PathGeometry.Totals());
         }
 
         private static void Warn(Exception e)
