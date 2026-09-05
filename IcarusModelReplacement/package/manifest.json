@@ -1,0 +1,9 @@
+{
+  "name": "IcarusModelReplacement",
+  "version_number": "1.0.0",
+  "website_url": "https://github.com/FyisFe/DSP_Mods_fyyy",
+  "description": "Replace Icarus with built-in Cute Gugugaga by default. Supports custom models. / 替换伊卡洛斯外观，内置咕嘎，安装即用，也支持自定义模型。",
+  "dependencies": [
+    "xiaoye97-BepInEx-5.4.17"
+  ]
+}
