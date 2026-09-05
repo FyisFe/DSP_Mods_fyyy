@@ -10,7 +10,7 @@ namespace PoolTrim
     {
         public const string GUID = "fyyy.dsp.pooltrim";
         public const string NAME = "PoolTrim";
-        public const string VERSION = "1.1.0";
+        public const string VERSION = "1.1.1";
 
         internal static ManualLogSource Log;
 
