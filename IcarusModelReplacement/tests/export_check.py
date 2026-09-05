@@ -8,11 +8,11 @@ import tempfile
 from pathlib import Path
 import gzip
 import bpy
-from mathutils import Matrix
+from mathutils import Matrix, Vector
 
 root = Path(__file__).resolve().parents[1]
 export = runpy.run_path(str(root / "tools/export_model.py"))["export_model"]
-png, dll = map(Path, sys.argv[sys.argv.index("--")+1:])
+png = Path(sys.argv[sys.argv.index("--")+1])
 scene = bpy.data.scenes.new("Export check")
 bpy.context.window.scene = scene
 mesh = bpy.data.meshes.new("Triangle")
@@ -43,16 +43,25 @@ with tempfile.TemporaryDirectory(prefix="icarus-export-check-") as temporary:
                 bone.head, bone.tail = (0, 0, i*.3), (0, 0, i*.3+.2)
             fin.parent, mast.parent = mast, base
             bpy.ops.object.mode_set(mode="OBJECT")
+            obj.vertex_groups.new(name="Decoration")
             obj.vertex_groups.new(name="Fin").add([0, 1, 2], 1, "REPLACE")
             obj.modifiers.new("Skin", "ARMATURE").object = rig
             settings["motions"] = [{"target": "Fin", "signal": "Air", "rotation": [15, 0, 0]}]
-        stats = export(obj, folder, settings)
+        stats = export(obj, folder, settings, double_sided=skinned)
         info = json.loads((folder / "model.json").read_text())
         assert [b["name"] for b in info["bones"]] == (["Base", "Mast", "Fin"] if skinned else ["Body"])
         payload = gzip.decompress((folder / "mesh.bin.gz").read_bytes())
         vertex = struct.unpack_from("<8f4B4f", payload, 16)
         assert vertex[8] == (2 if skinned else 0)
-        assert max(abs(a-b) for a, b in zip(vertex[:3], (1, 4, -2))) < 1e-5, ("world transform and mirrored winding", vertex[:3])
-        subprocess.run([str(root / "tests/bin/Release/net472/Checks.exe"), str(folder), str(dll.resolve())], check=True)
+        assert max(abs(a-b) for a, b in zip(vertex[:3], (1, 4, -2))) < 1e-5, ("world transform", vertex[:3])
+        count, indices = struct.unpack_from("<II", payload, 8)
+        assert (count, indices) == ((6, 6) if skinned else (3, 3))
+        vertices = [struct.unpack_from("<8f4B4f", payload, 16 + i*52) for i in range(count)]
+        triangles = struct.unpack_from("<%dI" % indices, payload, 16 + count*52)
+        for i in range(0, indices, 3):
+            a, b, c = (vertices[index] for index in triangles[i:i+3])
+            normal = (Vector(b[:3])-Vector(a[:3])).cross(Vector(c[:3])-Vector(a[:3])).normalized()
+            assert normal.dot(Vector(a[3:6])) > .999, "mirrored and back-face winding must match normals"
+        subprocess.run([str(root / "tests/bin/Release/net472/Checks.exe"), str(folder)], check=True)
         print({"skinned": skinned, **stats})
 print("PASS: generic Blender exporter -> external files -> actual C# loader")

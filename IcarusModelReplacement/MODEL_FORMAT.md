@@ -14,7 +14,7 @@ blender --background MyModel.blend --python export_model.py -- --object Body --s
 
 用 `--scene 场景名` 指定场景。衣物需要双面显示时，加 `--double-sided`，工具会复制反向三角形与法线。也可以在 Blender Python 中调用 `export_model(obj, directory, settings, double_sided=False)`。导出不会修改原网格。
 
-`settings.json` 使用下面的 JSON 字段，但省略由工具生成的 `format` 和 `bones`。完整例子见仓库的 `GuguGaga/art/settings.json`。导出后可用 `tests/Checks.csproj` 检查输出，两个参数依次为模型目录和构建后的 Mod DLL。
+`settings.json` 使用下面的 JSON 字段。`format` 和 `bones` 由工具生成，可以省略，也可以直接用已有的 `model.json` 作为配置输入。完整例子见仓库的 `GuguGaga/model/model.json`。构建 `tests/Checks.csproj` 后，运行 `Checks.exe 模型目录` 可检查导出结果；不传参数时运行格式和动作契约检查。
 
 ## JSON
 

@@ -7,9 +7,9 @@ using UnityEngine;
 namespace IcarusModelReplacement;
 
 [BepInPlugin("org.fyyy.icarusmodelreplacement", "Icarus Model Replacement", "1.0.0")]
-[BepInIncompatibility("org.fyyy.gugugaga")]
 public sealed class Plugin : BaseUnityPlugin
 {
+    private const string Builtin = "builtin";
     private MechaArmorModel armor;
     private Model model;
     private ConfigEntry<string> modelDirectory;
@@ -21,7 +21,7 @@ public sealed class Plugin : BaseUnityPlugin
 
     private void Awake()
     {
-        modelDirectory = Config.Bind("Model", "Directory", ModelPack.Builtin,
+        modelDirectory = Config.Bind("Model", "Directory", Builtin,
             "builtin uses the included Gugugaga. Otherwise, a model folder relative to BepInEx/plugins or absolute. Empty keeps vanilla Icarus. Changes apply in game.");
     }
 
@@ -32,8 +32,8 @@ public sealed class Plugin : BaseUnityPlugin
         if (next != null && !next.inited)
             next = null;
 
-        // Unity's destroyed objects compare equal to null, but still own our material references.
         string selection = modelDirectory.Value.Trim();
+        // Managed identity lets destroyed armor trigger model resource cleanup.
         if (!ReferenceEquals(armor, next) || selected != selection)
         {
             Clear();
@@ -45,20 +45,19 @@ public sealed class Plugin : BaseUnityPlugin
                 {
                     // Capture vanilla renderers before adding our skin under the same Model node.
                     var renderers = armor.GetComponentsInChildren<SkinnedMeshRenderer>(true);
-                    // Build successfully before hiding Icarus; missing shaders must leave a visible player.
-                    var pack = ModelPack.Load(selection, Paths.PluginPath, Path.GetDirectoryName(Info.Location));
+                    var directory = selection == Builtin
+                        ? Path.Combine(Path.GetDirectoryName(Info.Location), "model")
+                        : Path.Combine(Paths.PluginPath, selection);
+                    var pack = ModelPack.Load(directory);
+                    // Keep Icarus visible until the model and material are ready.
                     model = new Model(pack, player.controller.model, armor.gameObject.layer);
                     parts = Hide(renderers);
-                    if (model.Root.GetComponent<SkinnedMeshRenderer>().forceRenderingOff)
-                        throw new InvalidOperationException("Replacement renderer was hidden with Icarus.");
                     bones = new HiddenRenderer[armor.boneModels.Length];
                     Logger.LogInfo($"Model attached: {pack.Info.Name} by {pack.Info.Author} ({pack.Info.License}).");
                 }
                 catch (Exception ex)
                 {
                     Clear();
-                    // Retry only when the selection or player changes, not every frame.
-                    armor = next;
                     Logger.LogError($"Cannot load model '{selection}'; keeping Icarus. {ex}");
                     return;
                 }
@@ -107,7 +106,11 @@ public sealed class Plugin : BaseUnityPlugin
             renderers[i].Set(null);
     }
 
-    private void OnDisable() => Clear();
+    private void OnDisable()
+    {
+        Clear();
+        armor = null;
+    }
 
     private void Clear()
     {
@@ -117,7 +120,6 @@ public sealed class Plugin : BaseUnityPlugin
         parts = bones = wrecks = Array.Empty<HiddenRenderer>();
         model?.Dispose();
         model = null;
-        armor = null;
         wreckageGroup = null;
     }
 
@@ -128,17 +130,16 @@ public sealed class Plugin : BaseUnityPlugin
 
         public void Set(Renderer next)
         {
-            if (renderer != next)
-            {
-                if (renderer != null)
-                    renderer.forceRenderingOff = wasHidden;
-                renderer = next;
-                if (renderer != null)
-                    wasHidden = renderer.forceRenderingOff;
-            }
-            // Keep enabled intact: vanilla uses it when generating death wreckage and colliders.
+            if (renderer == next) return;
             if (renderer != null)
+                renderer.forceRenderingOff = wasHidden;
+            renderer = next;
+            if (renderer != null)
+            {
+                wasHidden = renderer.forceRenderingOff;
+                // enabled also controls vanilla colliders and death wreckage.
                 renderer.forceRenderingOff = true;
+            }
         }
     }
 }

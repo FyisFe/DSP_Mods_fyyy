@@ -10,7 +10,7 @@ Icarus Model Replacement 随 Mod 提供这个模型，并默认启用。切换�
 
 ## 制作与验证
 
-制作文件位于仓库的 `GuguGaga/` 目录。`art/source.glb` 保持下载内容不变；`art/GuguGaga.blend` 是已打包贴图的 Blender 5.2 工程。用 `art/model.py` 重建适配模型，在 `art/settings.json` 中编辑尺寸、材质和动作，再运行 `art/export.py` 生成 `model/` 中的运行时文件和网格预览。Mod 的 Release 构建负责将这些文件打入同一个 ZIP。
+制作文件位于仓库的 `GuguGaga/` 目录。`art/source.glb` 是原作 GLB，`art/GuguGaga.blend` 是已打包贴图的 Blender 5.2 工程。`art/model.py` 从原作生成适配工程。尺寸、材质和动作统一在 `model/model.json` 中编辑，`art/export.py` 保留这些设置，更新网格、贴图和骨骼数据，并生成预览。Mod 的 Release 构建将运行时资源打入同一个 ZIP。
 
 `art/poses.py` 检查配置驱动的蒙皮姿态。制作脚本生成的预览 PNG 和 `art/model-stats.json` 不纳入版本管理，需要时可重新生成。预览使用 Blender 灯光，游戏内的受光效果需要另行检查。
 

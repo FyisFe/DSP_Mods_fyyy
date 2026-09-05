@@ -13,7 +13,8 @@ scene = bpy.data.scenes["GuguGaga Studio"]
 bpy.context.window.scene = scene
 obj = scene.objects["GuguGaga mesh"]
 export = runpy.run_path(str(OUT.parents[1] / "IcarusModelReplacement/tools/export_model.py"))["export_model"]
-stats = export(obj, OUT.parent / "model", json.loads((OUT / "settings.json").read_text(encoding="utf-8")), True)
+model = OUT.parent / "model"
+stats = export(obj, model, json.loads((model / "model.json").read_text(encoding="utf-8")), True)
 stats["source_sha256"] = hashlib.sha256((OUT / "source.glb").read_bytes()).hexdigest()
 (OUT / "model-stats.json").write_text(json.dumps(stats, indent=2)+"\n", encoding="utf-8")
 path = OUT.parent / "model/mesh.bin.gz"

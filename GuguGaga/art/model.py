@@ -151,7 +151,6 @@ scene.view_settings.view_transform = "Standard"
 scene.render.filepath = str(OUT / "portrait.png")
 scene["source"] = "https://sketchfab.com/3d-models/cute-gugugaga-741280967ece40e395a70070d8b31132"
 scene["credit"] = "Cute Gugugaga by ReedMan, CC BY 4.0"
-scene["status"] = "DSP adaptation; see README for verification status"
 image.pack()
 for area in bpy.context.screen.areas:
     if area.type == "VIEW_3D":

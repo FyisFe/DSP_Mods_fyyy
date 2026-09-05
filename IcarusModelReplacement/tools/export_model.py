@@ -40,13 +40,15 @@ def export_model(obj, directory, settings, double_sided=False):
     names = [b.name for b in bones] if rig else ["Body"]
     if not 1 <= len(names) <= 256 or "$root" in names:
         raise ValueError("Use 1..256 bones; $root is reserved")
+    bone_indices = {name: i for i, name in enumerate(names)}
+    group_indices = {g.index: bone_indices[g.name] for g in obj.vertex_groups if g.name in bone_indices}
 
     def unity(v):
         return v.x, v.z, -v.y
 
     info = dict(settings)
     info["format"] = 1
-    info["bones"] = [{"name": b.name, "parent": names.index(b.parent.name) if b.parent else -1,
+    info["bones"] = [{"name": b.name, "parent": bone_indices[b.parent.name] if b.parent else -1,
                       "position": unity(rig.matrix_world @ b.head_local)} for b in bones] if rig else [
                       {"name": "Body", "parent": -1, "position": [0, 0, 0]}]
     for key in ("name", "author", "license", "scale"):
@@ -67,8 +69,8 @@ def export_model(obj, directory, settings, double_sided=False):
             raise ValueError("Mesh requires an atlas UV map")
         weights = []
         for vertex in data.vertices:
-            row = sorted(((names.index(obj.vertex_groups[g.group].name), g.weight) for g in vertex.groups
-                          if obj.vertex_groups[g.group].name in names and g.weight > 0),
+            row = sorted(((group_indices[g.group], g.weight) for g in vertex.groups
+                          if g.group in group_indices and g.weight > 0),
                          key=lambda x: -x[1]) if rig else [(0, 1)]
             dropped = max(dropped, sum(w for i, w in row[4:]))
             row = row[:4]
@@ -78,12 +80,14 @@ def export_model(obj, directory, settings, double_sided=False):
             weights.append([(i, w/total) for i, w in row] + [(0, 0)]*(4-len(row)))
         if dropped >= .02:
             raise ValueError("Limit the mesh to four bone influences before export")
-        normal_matrix = obj.matrix_world.to_3x3().inverted().transposed()
+        world = obj.matrix_world.copy()
+        normal_matrix = world.to_3x3().inverted().transposed()
+        mirrored = world.determinant() < 0
         for tri in data.loop_triangles:
             if tri.area <= 0:
                 raise ValueError("Degenerate triangle")
             corners = list(zip(tri.vertices, tri.loops))
-            if obj.matrix_world.determinant() < 0:
+            if mirrored:
                 corners.reverse()
             for index, loop in corners:
                 normal = (normal_matrix @ data.corner_normals[loop].vector).normalized()
@@ -92,7 +96,7 @@ def export_model(obj, directory, settings, double_sided=False):
                 if key not in remap:
                     remap[key] = len(vertices)
                     row = weights[index]
-                    vertices.append((*unity(obj.matrix_world @ data.vertices[index].co), *unity(normal), *coord,
+                    vertices.append((*unity(world @ data.vertices[index].co), *unity(normal), *coord,
                                      *(i for i, w in row), *(w for i, w in row)))
                 indices.append(remap[key])
     finally:

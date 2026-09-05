@@ -25,7 +25,7 @@
 
 角色跟随伊卡洛斯行走、悬浮和飞行，只替换外观，不修改碰撞、存档或战斗逻辑。机甲编辑器保留原有功能，喷焰、护盾和武器特效仍使用伊卡洛斯的骨骼位置。
 
-模型加载失败时会记录日志并保留伊卡洛斯，切换模型或重新读档后重试。停用插件、清空选择或退出存档时会恢复原模型。请勿与旧版 `GuguGaga.dll` 同时启用。
+模型加载失败时会记录日志并保留伊卡洛斯，切换模型或重新读档后重试。停用插件、清空选择或退出存档时会恢复原模型。
 
 内置模型没有专用的表情、采矿或战斗动画。自定义模型支持一个网格、一张 PNG 图集、一个材质和最多 256 根骨骼，每顶点最多四项权重。骨骼和动作由模型文件定义，制作方法见 [MODEL_FORMAT.md](MODEL_FORMAT.md)。
 
@@ -57,7 +57,7 @@ Restart the game after editing the file. Changes made through a configuration ma
 
 The character follows Icarus while walking, hovering and flying. The mod changes appearance without modifying collision, save data or combat logic. The mecha editor keeps its existing functions; thrusters, shields and weapon effects still use Icarus's bone positions.
 
-If a model fails to load, the mod logs the error and keeps Icarus visible. Changing the selection or reloading the save retries loading. Disabling the plugin, clearing the selection or leaving the save restores the original model. Do not enable it alongside the old `GuguGaga.dll`.
+If a model fails to load, the mod logs the error and keeps Icarus visible. Changing the selection or reloading the save retries loading. Disabling the plugin, clearing the selection or leaving the save restores the original model.
 
 The included model has no dedicated facial, mining or combat animations. Custom models support one mesh, one PNG atlas, one material and up to 256 bones, with at most four weights per vertex. Model files define the skeleton and motion. See [MODEL_FORMAT.md](MODEL_FORMAT.md) for the export format.
 

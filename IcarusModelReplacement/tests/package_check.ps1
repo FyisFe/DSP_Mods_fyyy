@@ -32,11 +32,13 @@ try {
     $plugin = Join-Path $temporary 'BepInEx\plugins\IcarusModelReplacement'
     $dll = Join-Path $plugin 'IcarusModelReplacement.dll'
     if ([Reflection.AssemblyName]::GetAssemblyName($dll).Version -ne [Version]"$version.0") { throw 'DLL/manifest version mismatch' }
+    $model = Get-Content -LiteralPath (Join-Path $plugin 'model\model.json') -Raw | ConvertFrom-Json
+    if ($model.name -ne 'Cute Gugugaga') { throw 'Missing bundled Gugugaga' }
     foreach ($name in @('model.json', 'mesh.bin.gz', 'texture.png')) {
         $source = Join-Path $project ("..\GuguGaga\model\" + $name)
         if ((Get-FileHash -LiteralPath $source).Hash -ne (Get-FileHash -LiteralPath (Join-Path $plugin ("model\" + $name))).Hash) { throw "Bundled model differs: $name" }
     }
-    & (Join-Path $PSScriptRoot 'bin\Release\net472\Checks.exe') (Join-Path $plugin 'model') $dll
+    & (Join-Path $PSScriptRoot 'bin\Release\net472\Checks.exe') (Join-Path $plugin 'model')
     if ($LASTEXITCODE -ne 0) { throw 'Extracted model checks failed' }
     Write-Output 'PASS: release ZIP layout, sole BepInEx dependency, version, icon and bundled model loaded outside the workspace.'
 } finally {

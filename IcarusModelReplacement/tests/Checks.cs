@@ -14,14 +14,13 @@ static class Checks
 
     static void Main(string[] args)
     {
-        Require(args.Length == 2, "Pass a model directory and the built Mod DLL.");
-        string modDirectory = Path.GetDirectoryName(Path.GetFullPath(args[1]));
-        Require(File.Exists(args[1]), "Missing Mod DLL");
-        var builtin = ModelPack.Load("builtin", Path.GetTempPath(), modDirectory);
-        Require(builtin.Info.Name == "Cute Gugugaga", "Bundled Gugugaga must load beside the Mod DLL");
-        Require(File.Exists(Path.Combine(modDirectory, "model", "README.md")), "Missing bundled model attribution");
-        var real = ModelPack.Load(Path.GetFullPath(args[0]), Path.GetTempPath(), modDirectory);
-        Console.WriteLine($"PASS: bundled Gugugaga and absolute model path '{real.Info.Name}', {real.Info.Bones.Length} bones, {real.Indices.Length/3:N0} triangles.");
+        Require(args.Length <= 1, "Usage: Checks.exe [model directory]. No arguments runs the contract checks.");
+        if (args.Length == 1)
+        {
+            var pack = ModelPack.Load(args[0]);
+            Console.WriteLine($"PASS: '{pack.Info.Name}', {pack.Info.Bones.Length} bones, {pack.Indices.Length/3:N0} triangles.");
+            return;
+        }
         for (int i = 0; i <= 100; i++)
         {
             double phase = i * Math.PI / 50;
@@ -49,7 +48,7 @@ static class Checks
                 WriteMesh(directory, count);
                 File.WriteAllBytes(Path.Combine(directory, "texture.png"), Convert.FromBase64String(
                     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j5ZkAAAAASUVORK5CYII="));
-                var pack = ModelPack.Load(Path.GetFileName(directory), Path.GetDirectoryName(directory), modDirectory);
+                var pack = ModelPack.Load(directory);
                 Require(pack.Info.Bones.Length == count && pack.Info.Motions[0].Index == count - 1
                     && pack.Info.Motions[1].Index == count, "arbitrary rig and root target");
             }

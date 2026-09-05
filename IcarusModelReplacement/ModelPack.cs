@@ -61,14 +61,10 @@ internal struct Vertex
 
 internal sealed class ModelPack
 {
-    public const string Builtin = "builtin";
     public PackInfo Info;
     public Vertex[] Vertices;
     public int[] Indices;
     public byte[] Texture;
-
-    public static ModelPack Load(string selection, string pluginsDirectory, string modDirectory) =>
-        Load(selection == Builtin ? Path.Combine(modDirectory, "model") : Path.Combine(pluginsDirectory, selection));
 
     // Fixed asset names keep untrusted manifests from requesting unrelated files.
     public static ModelPack Load(string directory)
