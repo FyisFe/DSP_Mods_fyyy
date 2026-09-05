@@ -1,0 +1,200 @@
+{
+  "name": "Cute Gugugaga",
+  "author": "ReedMan; DSP adaptation by FyisFe",
+  "license": "CC BY 4.0",
+  "source": "https://sketchfab.com/3d-models/cute-gugugaga-741280967ece40e395a70070d8b31132",
+  "scale": 1.3,
+  "offset": [
+    0,
+    0,
+    0
+  ],
+  "rotation": [
+    0,
+    0,
+    0
+  ],
+  "boundsPadding": 0.5,
+  "material": {
+    "smoothness": 0.1,
+    "metallic": 0,
+    "emission": 0.28,
+    "specularHighlights": false
+  },
+  "motions": [
+    {
+      "target": "Torso",
+      "signal": "Stride",
+      "rotation": [
+        0,
+        0,
+        4
+      ]
+    },
+    {
+      "target": "Torso",
+      "signal": "Step",
+      "position": [
+        0,
+        0.08,
+        0
+      ]
+    },
+    {
+      "target": "LeftWing",
+      "signal": "Stride",
+      "rotation": [
+        18,
+        0,
+        0
+      ]
+    },
+    {
+      "target": "LeftWing",
+      "signal": "Constant",
+      "rotation": [
+        0,
+        0,
+        -12
+      ]
+    },
+    {
+      "target": "LeftWing",
+      "signal": "Air",
+      "rotation": [
+        0,
+        0,
+        -58
+      ]
+    },
+    {
+      "target": "RightWing",
+      "signal": "Stride",
+      "rotation": [
+        -18,
+        0,
+        0
+      ]
+    },
+    {
+      "target": "RightWing",
+      "signal": "Constant",
+      "rotation": [
+        0,
+        0,
+        12
+      ]
+    },
+    {
+      "target": "RightWing",
+      "signal": "Air",
+      "rotation": [
+        0,
+        0,
+        58
+      ]
+    },
+    {
+      "target": "LeftFoot",
+      "signal": "LeftStep",
+      "position": [
+        0,
+        0.18,
+        0
+      ]
+    },
+    {
+      "target": "LeftFoot",
+      "signal": "Stride",
+      "position": [
+        0,
+        0,
+        0.22
+      ]
+    },
+    {
+      "target": "RightFoot",
+      "signal": "RightStep",
+      "position": [
+        0,
+        0.18,
+        0
+      ]
+    },
+    {
+      "target": "RightFoot",
+      "signal": "Stride",
+      "position": [
+        0,
+        0,
+        -0.22
+      ]
+    },
+    {
+      "target": "$root",
+      "signal": "Sail",
+      "rotation": [
+        90,
+        0,
+        0
+      ]
+    }
+  ],
+  "format": 1,
+  "bones": [
+    {
+      "name": "Torso",
+      "parent": -1,
+      "position": [
+        0.013605448417365551,
+        0.26530617475509644,
+        0.08597318828105927
+      ]
+    },
+    {
+      "name": "Head",
+      "parent": 0,
+      "position": [
+        0.0008682355983182788,
+        1.5719654560089111,
+        0.013915544375777245
+      ]
+    },
+    {
+      "name": "LeftWing",
+      "parent": 0,
+      "position": [
+        -0.37374842166900635,
+        1.2011568546295166,
+        -0.04745875298976898
+      ]
+    },
+    {
+      "name": "RightWing",
+      "parent": 0,
+      "position": [
+        0.380268394947052,
+        1.2006304264068604,
+        -0.04725072905421257
+      ]
+    },
+    {
+      "name": "LeftFoot",
+      "parent": -1,
+      "position": [
+        -0.25425130128860474,
+        0.16451764106750488,
+        -0.0045015872456133366
+      ]
+    },
+    {
+      "name": "RightFoot",
+      "parent": -1,
+      "position": [
+        0.2644244134426117,
+        0.16441652178764343,
+        -0.004582342226058245
+      ]
+    }
+  ]
+}

@@ -9,6 +9,9 @@ package/*.zip
 GameCode-latest
 XianTuEnhanced/
 .superpowers/
+GuguGaga/art/*.blend[1-9]
+GuguGaga/art/*.png
+GuguGaga/art/model-stats.json
 
 # Design/plan docs for mods not published to the public repo (kept local only)
 # XianTuEnhanced (and its window-position-lock feature)
