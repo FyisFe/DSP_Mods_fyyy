@@ -3,9 +3,18 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net472</TargetFramework>
     <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../PoolTrim.csproj" />
+    <Reference Include="0Harmony">
+      <HintPath>$(BepInExDir)/0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Mono.Cecil">
+      <HintPath>$(BepInExDir)/Mono.Cecil.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Assembly-CSharp">
       <HintPath>$(GameManagedDir)/Assembly-CSharp.dll</HintPath>
       <Private>false</Private>

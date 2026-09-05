@@ -1,8 +1,8 @@
 {
   "name": "PoolTrim",
-  "version_number": "1.1.1",
+  "version_number": "1.2.0",
   "website_url": "https://github.com/FyisFe/DSP_Mods_fyyy",
-  "description": "Trims belt paths and entity pool tails on load, significantly reducing RAM usage in megabase saves / 读档时裁剪传送带路径和实体池尾部，大幅降低超大型存档的内存占用",
+  "description": "Reduce memory use by trimming unused belt and entity capacity. Optional lossless geometry compression is off by default. / 裁剪传送带路径和实体池的多余容量，减少内存占用。可选路径几何无损压缩，默认关闭。",
   "dependencies": [
     "xiaoye97-BepInEx-5.4.17"
   ]

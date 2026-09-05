@@ -6,7 +6,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 
-internal static class Checks
+internal static partial class Checks
 {
     private const BindingFlags Fields = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
 
@@ -17,12 +17,12 @@ internal static class Checks
 
     private static void Main(string[] args)
     {
-        if (args.Length != 2)
-            throw new ArgumentException("Usage: Checks <game-managed-dir> <bepinex-core-dir>");
+        if (args.Length < 2 || args.Length > 3)
+            throw new ArgumentException("Usage: Checks <game-managed-dir> <bepinex-core-dir> [geometry-samples.bin]");
         AppDomain.CurrentDomain.AssemblyResolve += (sender, e) =>
         {
             string name = new AssemblyName(e.Name).Name + ".dll";
-            foreach (string dir in args)
+            foreach (string dir in args.Take(2))
             {
                 string path = Path.Combine(dir, name);
                 if (File.Exists(path)) return Assembly.LoadFrom(path);
@@ -30,6 +30,7 @@ internal static class Checks
             return null;
         };
         Run();
+        Geometry(args.Length == 3 ? args[2] : null);
     }
 
     private static FieldInfo Field(string name) => typeof(PlanetFactory).GetField(name, Fields);
