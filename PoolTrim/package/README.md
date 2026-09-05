@@ -11,6 +11,7 @@ PoolTrim 在读档时清理传送带路径和建筑数据中多余的预留空�
 
 | 指标 | 未启用 | 启用 |
 |---|---:|---:|
+| 读档时间（存档导入） | 233.54 秒 | **167.42 秒** |
 | 读档后进程提交内存 | 131.04 GB | **78.41 GB** |
 | 传送带路径数组容量 | 66.21 GB | **20.72 GB** |
 | 实体及伴随数组容量 | 18.66 GB | **15.90 GB** |
@@ -64,6 +65,7 @@ The save file is **46.68 GB** and contains **266 planets with factories**. Two r
 
 | Metric | Without PoolTrim | With PoolTrim |
 |---|---:|---:|
+| Load time (save import) | 233.54 s | **167.42 s** |
 | Post-load process commit | 131.04 GB | **78.41 GB** |
 | Belt-path array capacity | 66.21 GB | **20.72 GB** |
 | Entity and companion array capacity | 18.66 GB | **15.90 GB** |
