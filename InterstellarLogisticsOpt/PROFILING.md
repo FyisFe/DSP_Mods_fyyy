@@ -6,7 +6,7 @@ The release retains 1.1.0's station-ID phase dispersion, plus the dispatch-state
 
 The .NET Framework and game Mono checks pass 5,952 native/optimized dispatch-state comparisons and 24 branch scenarios. Scheduler checks use native route eligibility and dispatch arguments, then verify the GID phase contract for factors 1/2/5/30 over 1,800 ticks, exact 1/N call counts over complete cycles, live pool/configuration/time changes, unsupported-patch fallback, exception propagation and profiler accounting. These are offline checks; they do not establish save-level UPS, spike reduction or delivery throughput.
 
-No game capture has yet tested this final combination. DSPGAME was running during the update, so its installed DLL was not replaced. test1 still has the earlier complete-sweep release candidate with SHA-256 `8AD99E75DD668D29767CEC941811FDD6E988163A4FD6BB4135043A243CA75FB6`; the new build needs a game restart and a fresh comparison using [the capture procedure](../LogisticsProfiler/README.md#对照实验). LogisticsProfiler remains 0.2.2.
+No game capture has yet tested this final combination. After DSPGAME exited, the release DLL listed below was installed into test1 and its SHA-256 verified against the build. The previous DLL (`8AD99E75DD668D29767CEC941811FDD6E988163A4FD6BB4135043A243CA75FB6`) and config were backed up beside their originals with suffix `.20260909191008.bak`. Settings remain `Enabled=true, AmortizeFactor=5`; LogisticsProfiler remains 0.2.2. A fresh comparison should follow [the capture procedure](../LogisticsProfiler/README.md#对照实验).
 
 | Artifact | SHA-256 |
 |---|---|
