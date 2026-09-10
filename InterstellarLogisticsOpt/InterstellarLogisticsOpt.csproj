@@ -5,7 +5,7 @@
     <TargetFramework>net472</TargetFramework>
     <AssemblyName>InterstellarLogisticsOpt</AssemblyName>
     <BepInExPluginGuid>org.fyyy.interstellarlogisticsopt</BepInExPluginGuid>
-    <Description>Amortizes native interstellar dispatch with a shared priority clock / 原版顺序全航线降频，共享派船与锁时钟</Description>
+    <Description>Reduces interstellar logistics scheduling CPU cost / 降低星际物流调度 CPU 开销</Description>
     <Version>1.2.0</Version>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>https://nuget.bepinex.dev/v3/index.json</RestoreAdditionalProjectSources>

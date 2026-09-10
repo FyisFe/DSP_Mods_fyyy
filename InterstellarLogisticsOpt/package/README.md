@@ -12,9 +12,9 @@
 | 设置 | 默认值 | 作用 |
 |---|---:|---|
 | `Enabled` | `true` | 开启优化；关闭后使用原版调度 |
-| `AmortizeFactor` | `1` | 调度间隔系数，范围 1 至 30。1 保持原版频率，数值越大，检查供需的次数越少 |
+| `AmortizeFactor` | `1` | 调度间隔系数，范围 1 至 30。设为 N 时，派船检查频率降为原版的 `1/N`；1 保持原版频率 |
 
-系数作用于全部航线，包括塔对塔、行星、恒星和物流分组。设为 5 时，原本每 10、30、60 tick 执行的检查，改为每 50、150、300 tick 执行。这里的 tick 是模拟更新次数。
+系数作用于全部航线，包括塔对塔、行星、恒星和物流分组。设为 5 时，检查频率为原版的 `1/5`，原本每 10、30、60 tick 执行的检查，改为每 50、150、300 tick 执行。这里的 tick 是模拟更新次数。
 
 ### 优化了什么
 
@@ -63,9 +63,9 @@ Change settings in the InterstellarLogisticsOpt tab of UXAssist. You do not need
 | Setting | Default | Effect |
 |---|---:|---|
 | `Enabled` | `true` | Enable optimization; turning it off restores native dispatch |
-| `AmortizeFactor` | `1` | Dispatch interval multiplier, from 1 to 30. At 1, checks keep their native frequency. Higher values run them less often |
+| `AmortizeFactor` | `1` | Dispatch interval multiplier, from 1 to 30. At N, dispatch checks run at `1/N` of their native frequency; 1 keeps the native frequency |
 
-The factor applies to all routes, including station, planet, star and logistics-group priorities. Factor 5 changes checks that normally run every 10, 30 or 60 ticks to every 50, 150 or 300 ticks. These are simulation ticks.
+The factor applies to all routes, including station, planet, star and logistics-group priorities. Factor 5 runs checks at `1/5` of their native frequency: every 50, 150 or 300 ticks instead of every 10, 30 or 60. These are simulation ticks.
 
 ### What it changes
 

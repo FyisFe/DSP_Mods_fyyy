@@ -4,16 +4,16 @@
 
 The release version is 1.2.0. Historical capture labels below identify the development binaries actually tested; they have not been relabeled. In particular, the early development build also called 1.2.0 has different behavior and a different hash from this release. Current behavior is maintained in [the package README](package/README.md), and cumulative changes from 1.1.0 are in [CHANGELOG.md](package/CHANGELOG.md).
 
-Only version metadata, packaging and documentation changed after the latest game captures. The rebuilt assembly version is `1.2.0.0`, its BepInPlugin version and package manifest are `1.2.0`, and all eight top-level scheduler/clock/dispatch-optimization method bodies match the tested 1.3.1 DLL. Existing .NET Framework/Mono logic checks remain applicable. The Release build passed with zero warnings/errors. The ZIP root contains exactly the DLL, manifest, README, CHANGELOG and icon, with all bytes matching the build/source files.
+Only version and description metadata, packaging and documentation changed after the latest game captures. The rebuilt assembly version is `1.2.0.0`, its BepInPlugin version and package manifest are `1.2.0`, and all eight top-level scheduler/clock/dispatch-optimization method bodies match the tested 1.3.1 DLL. Existing .NET Framework/Mono logic checks remain applicable. The Release build passed with zero warnings/errors. The ZIP root contains exactly the DLL, manifest, README, CHANGELOG and icon, with all bytes matching the build/source files.
 
 | Artifact | SHA-256 |
 |---|---|
-| Release 1.2.0 DLL | `8AD99E75DD668D29767CEC941811FDD6E988163A4FD6BB4135043A243CA75FB6` |
-| `package/InterstellarLogisticsOpt-1.2.0.zip` | `99F196DA977C9FF19BDFE9EE07D967F878AAFE1C59B5099B936994B391B52BA7` |
+| Release 1.2.0 DLL | `9F3BD11F9062FDEE31C6AB1816F390756561FE0B35EF8F385CA32928B2DEAC7F` |
+| `package/InterstellarLogisticsOpt-1.2.0.zip` | `7A695E90BC0E0F66B2B1537EAF472F9FC917DB00156151F9B4844DDE204A344F` |
 
-The earlier development ZIP at that path is preserved as `InterstellarLogisticsOpt-1.2.0-development-20260909175208.zip`. After DSPGAME exited, release 1.2.0 was installed into test1 and its DLL hash verified against the build. The previous DLL and config were backed up beside their originals with suffix `.20260909175543.bak`. Settings remain `Enabled=true, AmortizeFactor=5`; LogisticsProfiler remains 0.2.2.
+The earlier development ZIP at that path is preserved as `InterstellarLogisticsOpt-1.2.0-development-20260909175208.zip`. After DSPGAME exited, release 1.2.0 was installed into test1 and its DLL hash verified against that build. The installed DLL remains `8AD99E75DD668D29767CEC941811FDD6E988163A4FD6BB4135043A243CA75FB6`, from before the assembly-description update. The previous DLL and config were backed up beside their originals with suffix `.20260909175543.bak`. Settings remain `Enabled=true, AmortizeFactor=5`; LogisticsProfiler remains 0.2.2.
 
-The package includes the revised Chinese-first collapsed README and changelog. README screenshot assets are the supplied PNGs copied unchanged to `prior.png` (SHA-256 `82EEB533CD5A1718B050C81347D422CEAE7D005D4B9DC774FFD31CFC7F9A2345`) and `after.png` (`E7C4C1A4895D9279B8821CBBB93AB49131883EDB4CC678778A4ED2BB8CC18AB4`). They show SampleAndHoldSim Ratio 200 and are presented as disabled/enabled screenshots, not a version comparison or averaged profiler capture. The DLL is unchanged by this documentation update. The existing GitHub raw-image URLs will show the replacement files after the repository images are published.
+The package includes the revised Chinese-first collapsed README and changelog. README screenshot assets are the supplied PNGs copied unchanged to `prior.png` (SHA-256 `82EEB533CD5A1718B050C81347D422CEAE7D005D4B9DC774FFD31CFC7F9A2345`) and `after.png` (`E7C4C1A4895D9279B8821CBBB93AB49131883EDB4CC678778A4ED2BB8CC18AB4`). They show SampleAndHoldSim Ratio 200 and are presented as disabled/enabled screenshots, not a version comparison or averaged profiler capture. The README and assembly-description updates leave runtime code unchanged. The existing GitHub raw-image URLs will show the replacement files after the repository images are published.
 
 ## Factor-5 comparison with 1.1.0
 
