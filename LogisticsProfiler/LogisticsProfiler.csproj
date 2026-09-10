@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <Version>0.2.2</Version>
+    <LangVersion>latest</LangVersion>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <BepInExDir Condition="'$(BepInExDir)' == ''">C:\Users\Yi\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\profiles\latest\BepInEx\core</BepInExDir>
+    <GameManagedDir Condition="'$(GameManagedDir)' == ''">C:\Program Files (x86)\Applications\Steam\steamapps\common\Dyson Sphere Program\DSPGAME_Data\Managed</GameManagedDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="*.cs" />
+    <Reference Include="BepInEx" HintPath="$(BepInExDir)\BepInEx.dll" Private="false" />
+    <Reference Include="0Harmony" HintPath="$(BepInExDir)\0Harmony.dll" Private="false" />
+    <Reference Include="Assembly-CSharp" HintPath="$(GameManagedDir)\Assembly-CSharp.dll" Private="false" />
+    <Reference Include="UnityEngine" HintPath="$(GameManagedDir)\UnityEngine.dll" Private="false" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(GameManagedDir)\UnityEngine.CoreModule.dll" Private="false" />
+  </ItemGroup>
+</Project>

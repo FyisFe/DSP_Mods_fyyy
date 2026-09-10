@@ -5,9 +5,8 @@
     <TargetFramework>net472</TargetFramework>
     <AssemblyName>InterstellarLogisticsOpt</AssemblyName>
     <BepInExPluginGuid>org.fyyy.interstellarlogisticsopt</BepInExPluginGuid>
-    <Description>Phase-disperses interstellar logistics scheduling to flatten CPU spikes / 相位分散星际物流调度以削平卡顿</Description>
-    <Version>1.1.0</Version>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Description>Staggers interstellar logistics scheduling to reduce CPU load / 相位分散星际物流调度，降低 CPU 开销</Description>
+    <Version>1.2.0</Version>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>https://nuget.bepinex.dev/v3/index.json</RestoreAdditionalProjectSources>
   </PropertyGroup>
@@ -36,8 +35,7 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Release'">
-    <Exec Command="del /F /Q package\$(ProjectName)-$(Version).zip
-powershell Compress-Archive -Force -DestinationPath 'package/$(ProjectName)-$(Version).zip' -Path &quot;$(TargetPath)&quot;, package/icon.png, package/manifest.json, package/README.md" />
+    <Exec Command="powershell -NoProfile -Command &quot;Compress-Archive -Force -DestinationPath 'package/$(ProjectName)-$(Version).zip' -Path '$(TargetPath)', 'package/icon.png', 'package/manifest.json', 'package/README.md', 'package/CHANGELOG.md'&quot;" />
   </Target>
 
 </Project>

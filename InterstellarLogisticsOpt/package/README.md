@@ -1,40 +1,103 @@
 # InterstellarLogisticsOpt
 
-依赖 / Requires **[UXAssist](https://thunderstore.io/c/dyson-sphere-program/p/soarqin/UXAssist/)**
+<details>
+<summary>中文看我</summary>
 
-## 中文
+减少星际运输塔寻找供需配对、决定派船时的 CPU 开销，适合物流塔较多的大型存档。需要安装 [UXAssist](https://thunderstore.io/c/dyson-sphere-program/p/soarqin/UXAssist/)。
 
-优化**星际物流**（星际运输塔）的调度开销，适用于上千座大塔的高强度冲糖场景。
+### 使用
 
-两项优化：
+在游戏内 UXAssist 的「星际物流优化」页调整，设置从下一次模拟更新开始生效，无需重新读档。
 
-- **调度提前退出**（默认开启）：对没有空闲运输船或电量不足的塔，直接跳过整轮供需配对扫描，省下白扫一圈的无用开销。
-- **调度平摊 `AmortizeFactor`**（默认 `1` = 关闭）：设为 `2` 及以上时，每座塔的调度频率降为原来的 `1/N`（如 `5` = 每 50/150/300 tick 调度一次），总开销降到 `1/N`，且逐帧平摊、不产生卡顿尖峰。代价是物流响应变慢。
+| 设置 | 默认值 | 作用 |
+|---|---:|---|
+| `Enabled` | `true` | 开启优化；关闭后使用原版调度 |
+| `AmortizeFactor` | `1` | 调度间隔系数，范围 1 至 30。设为 N 时，派船检查频率降为原版的 `1/N`；1 保持原版频率 |
 
-在游戏内 **UXAssist** 设置面板的「星际物流优化」标签页里实时开关与调节，无需重载存档。
+系数作用于全部航线，包括塔对塔、行星、恒星和物流分组。设为 5 时，检查频率为原版的 `1/5`，原本每 10、30、60 tick 执行的检查，改为每 50、150、300 tick 执行。这里的 tick 是模拟更新次数。
 
-## English
+### 优化了什么
 
-Cuts the scheduling CPU cost of **interstellar logistics** (stellar logistics stations) for large bases — thousands of stations under heavy throughput.
+本塔供需不足时，游戏仍可能需要维护对端的优先级锁。mod 会省去没有作用的库存读取和重复锁刷新，保留必要的锁维护和配对游标更新。这项优化在系数 1 时也生效。
 
-Two optimizations:
+系数大于 1 时，按塔编号把派船检查错开到不同 tick。每座塔按自己的固定相位执行检查，减少同一 tick 集中处理大量塔的情况。
 
-- **Dispatch early-exit** (always on): a station with no idle ship or too little energy skips the whole supply/demand scan instead of walking it just to find nothing to send.
-- **Amortization `AmortizeFactor`** (default `1` = off): set `2`+ to schedule each station `1/N` as often (e.g. `5` = every 50/150/300 ticks instead of 10/30/60), cutting total scheduler CPU to `1/N` with load spread evenly across ticks (no spikes). Trades logistics responsiveness for CPU.
+### 使用时留意
 
-Toggle and tune live from the **InterstellarLogisticsOpt** tab in the in-game UXAssist panel — no save reload needed.
+系数越大，派船响应越慢，也可能限制物流吞吐。例如在 60 UPS、系数 5 下，一座忽略优先航线的塔，每分钟最多通过普通调度新派出 12 艘船；其他塔送取货和返程装货另算。航程较短时，更容易受到这个限制。
 
-## 性能对比 / Performance comparison
+相位分散会改变不同塔之间的检查顺序，较长的检查间隔也可能让优先级锁在下次检查前失效。因此，系数大于 1 时，以部分优先级准确性和响应速度换取性能，不能保证严格遵循原版的跨塔优先级顺序。
 
-场景：约 400 万/min 宇宙矩阵存档，模拟帧 (sampleAndHoldSim) = 200。关闭 → 开启（`AmortizeFactor = 5`）。
-Scenario: ~4M/min universe-matrix save, simulated frames (sampleAndHoldSim) = 200; mod off → on (`AmortizeFactor = 5`).
+单座塔的配对检查一次完成，各塔的工作量也不相同，因此相位分散不能保证消除所有尖峰。CPU 开销和 UPS 不会按系数等比例变化，调大系数后也要留意生产和实际送货量。
 
-**CPU 19.016 ms → 13.172 ms（约 −31% / ~31% lower frame time）**，GPU 与内存基本不变 / GPU & memory unchanged.
+### 性能截图
 
-关闭 / Off — 19.016 ms
+两张图的 SampleAndHoldSim Ratio 均为 200，按关闭和开启优化的顺序展示，开启时系数为 5。
 
-![Off / 关闭](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/InterstellarLogisticsOpt/prior.png)
+| 面板读数 | 关闭 | 开启，系数 5 |
+|---|---:|---:|
+| CPU 圆环 | 19.708 ms | 12.354 ms |
+| 物流调度 | 8.414 ms | 0.066 ms |
 
-开启 / On (`AmortizeFactor = 5`) — 13.172 ms
+具体效果随存档、系数和其他 mod 设置变化。
 
-![On / 开启](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/InterstellarLogisticsOpt/after.png)
+关闭：
+
+![关闭优化](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/InterstellarLogisticsOpt/prior.png)
+
+开启，系数 5：
+
+![开启优化，系数 5](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/InterstellarLogisticsOpt/after.png)
+
+</details>
+
+<details>
+<summary>README</summary>
+
+Reduces the CPU time spent matching supply and demand and dispatching interstellar ships in large saves. Requires [UXAssist](https://thunderstore.io/c/dyson-sphere-program/p/soarqin/UXAssist/).
+
+### Usage
+
+Change settings in the InterstellarLogisticsOpt tab of UXAssist. Settings take effect on the next simulation tick without reloading the save.
+
+| Setting | Default | Effect |
+|---|---:|---|
+| `Enabled` | `true` | Enable optimization; turning it off restores native dispatch |
+| `AmortizeFactor` | `1` | Dispatch interval multiplier, from 1 to 30. At N, dispatch checks run at `1/N` of their native frequency; 1 keeps the native frequency |
+
+The factor applies to all routes, including station, planet, star and logistics-group priorities. Factor 5 runs checks at `1/5` of their native frequency: every 50, 150 or 300 ticks instead of every 10, 30 or 60. These are simulation ticks.
+
+### What it changes
+
+A station with insufficient supply or demand may still need to maintain another station's priority locks. The mod skips inventory reads and repeated lock refreshes that would have no effect, while keeping required lock updates and pair-cursor advancement. This also works at factor 1.
+
+At factors above 1, station IDs stagger dispatch checks across ticks. Each station runs at its own fixed phase, spreading station visits over time.
+
+### Things to consider
+
+Higher factors delay dispatch and may limit throughput. At 60 UPS and factor 5, a station set to ignore priority routes can launch at most 12 new ships per minute through ordinary dispatch. Deliveries and pickups by other stations, and return loading, are separate. Short routes are more likely to reach this limit.
+
+Staggering changes the order of checks between stations, and longer intervals can let priority locks expire before the next check. Factors above 1 therefore trade some priority fidelity and responsiveness for performance; they do not preserve strict native priority order across stations.
+
+A single station's pair scan runs in one call, and stations have different workloads, so staggering cannot eliminate every spike. CPU time and UPS do not scale directly with the factor; check production and actual deliveries after increasing it.
+
+### Performance screenshots
+
+Both screenshots use a SampleAndHoldSim Ratio of 200. They show the mod disabled, then enabled at factor 5.
+
+| Panel reading | Disabled | Enabled, factor 5 |
+|---|---:|---:|
+| CPU ring | 19.708 ms | 12.354 ms |
+| Logistics scheduling | 8.414 ms | 0.066 ms |
+
+Results depend on the save, factor and other mod settings.
+
+Disabled:
+
+![Optimization disabled](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/InterstellarLogisticsOpt/prior.png)
+
+Enabled, factor 5:
+
+![Optimization enabled, factor 5](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/InterstellarLogisticsOpt/after.png)
+
+</details>
