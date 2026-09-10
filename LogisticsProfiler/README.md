@@ -30,9 +30,9 @@
 |---|---|---|
 | A | `Enabled=false` | 原版调度计算 |
 | B | `Enabled=true, AmortizeFactor=1` | 保留原版节奏，省去冗余库存读取和锁刷新 |
-| C | `Enabled=true, AmortizeFactor=5` | 全航线降频，完整执行每次到期扫描 |
+| C | `Enabled=true, AmortizeFactor=5` | 全航线检查降至 1/5，按塔编号错开执行 |
 
-ILO 的系数覆盖全部优先级，并同步减慢锁时钟；每个逻辑 tick 完整执行原版调度，返程取货保持原版搜索规则。采样中不要切换配置；metadata 只比较开始和结束的配置，检测不到中途改回原值。暂停、换存档或 `settings_changed=True` 的记录不适合作为稳定运行对照。普通停止应为 `duration` 或 `manual`。
+ILO 的系数覆盖全部优先级，系数大于 1 时沿用 1.1.0 的按塔相位分散方式；锁倒计时和返程装货保持原版行为。跨塔优先级顺序可能变化，这是当前方案接受的性能取舍。替代调度在 Harmony prefix 内执行，因此 `original_skipped` 不代表没有进行调度。采样中不要切换配置；metadata 只比较开始和结束的配置，检测不到中途改回原值。暂停、换存档或 `settings_changed=True` 的记录不适合作为稳定运行对照。普通停止应为 `duration` 或 `manual`。
 
 先各采集一组，再根据波动决定是否重复。另看游戏生产/交通统计，持续覆盖若干船舶往返周期：60 秒采样不能证明物流吞吐长期不变，也不能用发船数代替实际送货量。
 
@@ -123,4 +123,4 @@ python LogisticsProfiler/tests/run_mono.py `
 
 `run_mono.py` 在独立进程中加载游戏自带 Mono，执行同一套聚合、24 个调度分支场景、ILO 状态等价检查、调度时序检查和专项微基准，不连接或操作正在运行的游戏。无头进程不具备 Unity 原生调用，因此跳过飞船更新的绑定检查；完整的三个方法绑定仍由 .NET Framework 检查覆盖。两种运行时都必须接受同一个调度签名并拒绝实际操作数变化。
 
-当前离线检查使用游戏程序集 MVID `ECE4A40E-5E73-43F4-A9F8-4E74970B5942`，覆盖全部优先级、库存与订单边界、完整及过期锁、无闲船/低电量、开关状态、独立运行和 profiler 两种加载顺序。调度检查对照系数 1/2/5/30 下的原版轨迹和锁倒计时，并检查原版返航选择、异常传播、因子切换、兼容回退、卸载及 profiler 的真实 tick 分组。两种运行时均执行从实际 `InternalTickRemote` 提取的返航选择和锁倒计时 IL；完整飞船方法的 Harmony 绑定由 .NET Framework 验证，无头 Mono 不具备完整 Unity 飞行环境。微基准不能外推为存档 UPS。已有实机采样及其版本、验证范围见[采样分析](../InterstellarLogisticsOpt/PROFILING.md)；长期物流吞吐仍需游戏验证。
+当前离线检查使用游戏程序集 MVID `ECE4A40E-5E73-43F4-A9F8-4E74970B5942`，覆盖全部优先级、库存与订单边界、完整及过期锁、无闲船/低电量、开关状态、独立运行和 profiler 两种加载顺序。调度检查以原版调用确定航线资格和参数，核对系数 1/2/5/30 下的按塔相位规则及完整周期内的 `1/N` 次数，并覆盖塔池变更、异常、因子/时间切换、兼容回退及 profiler 的真实 tick 分组。ILO 不再修改 `InternalTickRemote`；profiler 的完整飞船方法绑定由 .NET Framework 验证，无头 Mono 不具备完整 Unity 飞行环境。微基准不能外推为存档 UPS。已有实机采样及其版本、验证范围见[采样分析](../InterstellarLogisticsOpt/PROFILING.md)；当前相位分散实现的 UPS、尖峰和物流吞吐仍需重新实测。

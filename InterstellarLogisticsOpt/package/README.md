@@ -20,15 +20,17 @@
 
 本塔供需不足时，游戏仍可能需要维护对端的优先级锁。mod 会省去没有作用的库存读取和重复锁刷新，保留必要的锁维护和配对游标更新。这项优化在系数 1 时也生效。
 
-调大系数后，派船检查和优先级锁的倒计时一起放慢。每轮按原版优先级和塔的顺序完整扫描，返程取货、飞船移动、已有订单、卸货和翘曲器补充照常处理。
+系数大于 1 时，按塔编号把派船检查错开到不同 tick，沿用 1.1.0 的相位分散方式。每座塔按自己的固定相位执行检查，减少同一 tick 集中处理大量塔的情况。优先级锁仍按原版速度倒计时，返程取货、飞船移动、已有订单、卸货和翘曲器补充照常处理。
 
 ### 使用时留意
 
 系数越大，派船响应越慢，也可能限制物流吞吐。例如在 60 UPS、系数 5 下，一座忽略优先航线的塔，每分钟最多通过普通调度新派出 12 艘船；其他塔送取货和返程装货另算。航程较短时，更容易受到这个限制。
 
-每轮扫描一次执行完，仍可能出现调度尖峰。CPU 开销和 UPS 不会按系数等比例变化，调大系数后也要留意生产和实际送货量。
+相位分散会改变不同塔之间的检查顺序，较长的检查间隔也可能让优先级锁在下次检查前失效。因此，系数大于 1 时，以部分优先级准确性和响应速度换取性能，不能保证严格遵循原版的跨塔优先级顺序。
 
-关闭优化或切回系数 1，会恢复原版调度节奏。两个大于 1 的系数之间切换时，当前等待间隔结束后使用新值；重新读档会重置调度时钟。降频会改变派船时机，配送过程不保证与原版逐次相同。
+单座塔的配对检查仍一次完成，各塔的工作量也不相同，因此相位分散不能保证消除所有尖峰。CPU 开销和 UPS 不会按系数等比例变化，调大系数后也要留意生产和实际送货量。
+
+设置从下一次模拟更新开始生效。关闭优化或切回系数 1，会恢复原版调度节奏；系数 1 仍保留库存读取优化。
 
 ### 性能截图
 
@@ -39,7 +41,7 @@
 | CPU 圆环 | 19.708 ms | 12.354 ms |
 | 物流调度 | 8.414 ms | 0.066 ms |
 
-截图记录的是当时的面板读数，具体效果随存档、系数和其他 mod 设置变化。
+截图记录的是此前测试版本的面板读数，当前相位分散实现仍需重新实测。具体效果随存档、系数和其他 mod 设置变化。
 
 关闭：
 
@@ -71,15 +73,17 @@ The factor applies to all routes, including station, planet, star and logistics-
 
 A station with insufficient supply or demand may still need to maintain another station's priority locks. The mod skips inventory reads and repeated lock refreshes that would have no effect, while keeping required lock updates and pair-cursor advancement. This also works at factor 1.
 
-Higher factors slow dispatch checks and priority-lock countdowns together. Each sweep runs in full, in native priority and station order. Return loading, ship movement, existing orders, unloading and warper replenishment keep their normal behavior.
+At factors above 1, station IDs stagger dispatch checks across ticks, using the same phase assignment as 1.1.0. Each station runs at its own fixed phase, spreading station visits over time. Priority locks retain their native countdown. Return loading, ship movement, existing orders, unloading and warper replenishment keep their normal behavior.
 
 ### Things to consider
 
 Higher factors delay dispatch and may limit throughput. At 60 UPS and factor 5, a station set to ignore priority routes can launch at most 12 new ships per minute through ordinary dispatch. Deliveries and pickups by other stations, and return loading, are separate. Short routes are more likely to reach this limit.
 
-Complete sweeps can still cause scheduling spikes. CPU time and UPS do not scale directly with the factor, so check production and actual deliveries after increasing it.
+Staggering changes the order of checks between stations, and longer intervals can let priority locks expire before the next check. Factors above 1 therefore trade some priority fidelity and responsiveness for performance; they do not preserve strict native priority order across stations.
 
-Disabling the mod or setting factor 1 restores native scheduling. When switching between factors above 1, the new value applies after the current waiting interval. Loading a save resets the dispatch clock. Changed dispatch timing means delivery histories can differ from the original game.
+A single station's pair scan still runs in one call, and stations have different workloads, so staggering cannot eliminate every spike. CPU time and UPS do not scale directly with the factor; check production and actual deliveries after increasing it.
+
+Settings take effect on the next simulation tick. Disabling the mod or setting factor 1 restores native scheduling; factor 1 still keeps the inventory-read optimization.
 
 ### Performance screenshots
 
@@ -90,7 +94,7 @@ Both screenshots use a SampleAndHoldSim Ratio of 200. They show the mod disabled
 | CPU ring | 19.708 ms | 12.354 ms |
 | Logistics scheduling | 8.414 ms | 0.066 ms |
 
-These are readings at the time of each screenshot. Results depend on the save, factor and other mod settings.
+These screenshots show an earlier test build. The current phase-dispersed implementation still needs a new game measurement. Results depend on the save, factor and other mod settings.
 
 Disabled:
 

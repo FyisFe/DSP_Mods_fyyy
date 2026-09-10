@@ -5,7 +5,7 @@
     <TargetFramework>net472</TargetFramework>
     <AssemblyName>InterstellarLogisticsOpt</AssemblyName>
     <BepInExPluginGuid>org.fyyy.interstellarlogisticsopt</BepInExPluginGuid>
-    <Description>Reduces interstellar logistics scheduling CPU cost / 降低星际物流调度 CPU 开销</Description>
+    <Description>Staggers interstellar logistics scheduling to reduce CPU load / 相位分散星际物流调度，降低 CPU 开销</Description>
     <Version>1.2.0</Version>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>https://nuget.bepinex.dev/v3/index.json</RestoreAdditionalProjectSources>

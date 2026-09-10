@@ -36,7 +36,6 @@ internal static class Checks
         if (args.Length == 2) GameChecks();
         else DispatchDetails.Enabled = true;
         DispatchChecks();
-        PriorityClockChecks(args.Length == 2);
         SchedulerChecks();
     }
 
@@ -158,106 +157,6 @@ internal static class Checks
 
     private static bool Skip() => false;
 
-    private static Func<StationComponent, int> _nativeAge, _patchedAge, _returnBound;
-
-    private static Func<StationComponent, int> CompileBlock(List<CodeInstruction> code)
-    {
-        var method = new DynamicMethod("priority_block", typeof(int), new[] { typeof(StationComponent) }, typeof(Checks).Module, true);
-        var il = method.GetILGenerator();
-        var labels = code.SelectMany(c => c.labels).Distinct().ToDictionary(l => l, _ => il.DefineLabel());
-        var locals = new Dictionary<int, LocalBuilder>();
-        foreach (var instruction in code)
-        {
-            foreach (var label in instruction.labels) il.MarkLabel(labels[label]);
-            object operand = instruction.operand;
-            if (operand is LocalBuilder local)
-            {
-                if (!locals.TryGetValue(local.LocalIndex, out var mapped)) locals.Add(local.LocalIndex, mapped = il.DeclareLocal(local.LocalType));
-                il.Emit(instruction.opcode, mapped);
-            }
-            else if (operand is Label label) il.Emit(instruction.opcode, labels[label]);
-            else if (operand is FieldInfo field) il.Emit(instruction.opcode, field);
-            else if (operand is MethodInfo called) il.Emit(instruction.opcode, called);
-            else if (operand is Type type) il.Emit(instruction.opcode, type);
-            else if (operand is byte number) il.Emit(instruction.opcode, number);
-            else if (operand is int value) il.Emit(instruction.opcode, value);
-            else if (operand == null) il.Emit(instruction.opcode);
-            else throw new Exception("Unsupported priority-block operand: " + operand);
-        }
-        return (Func<StationComponent, int>)method.CreateDelegate(typeof(Func<StationComponent, int>));
-    }
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    private static void PriorityClockChecks(bool fullBindings)
-    {
-        var remote = AccessTools.Method(typeof(StationComponent), "InternalTickRemote");
-        var renderer = AccessTools.Method(typeof(StationComponent), "ShipRenderersOnTick");
-        foreach (bool patched in new[] { false, true })
-        {
-            var code = PatchProcessor.GetOriginalInstructions(remote);
-            if (patched)
-                code = PriorityClock.Transpiler(code, new DynamicMethod("clock", typeof(void), Type.EmptyTypes).GetILGenerator()).ToList();
-            Require(DispatchScheduler.Failure == null, "supported flight method accepts priority clock");
-            int tailStart = code.FindIndex(c => c.Calls(renderer)) + 1;
-            var tail = code.Skip(tailStart).Select(c => new CodeInstruction(c)).ToList();
-            var zero = new CodeInstruction(OpCodes.Ldc_I4_0);
-            zero.labels.AddRange(tail[tail.Count - 1].labels);
-            tail[tail.Count - 1].labels.Clear();
-            tail.Insert(tail.Count - 1, zero);
-            if (patched) _patchedAge = CompileBlock(tail); else _nativeAge = CompileBlock(tail);
-            if (patched)
-            {
-                int start = code.FindIndex(c => c.LoadsField(AccessTools.Field(typeof(StationComponent), "routePriority"))) - 1;
-                int firstStore = code.FindIndex(start, c => c.IsStloc());
-                object bound = code.Skip(firstStore + 1).First(c => c.IsStloc()).operand;
-                int end = code.FindLastIndex(c => c.IsStloc() && Equals(c.operand, bound)) + 1;
-                var selection = code.Skip(start).Take(end - start).Select(c => new CodeInstruction(c)).ToList();
-                var result = new CodeInstruction(OpCodes.Ldloc, bound);
-                result.labels.AddRange(code[end].labels);
-                selection.Add(result);
-                selection.Add(new CodeInstruction(OpCodes.Ret));
-                _returnBound = CompileBlock(selection);
-            }
-        }
-        foreach (bool age in new[] { false, true })
-        foreach (ERemoteRoutePriority route in Enum.GetValues(typeof(ERemoteRoutePriority)))
-        {
-            DispatchScheduler.AgeLocks = age;
-            int maximum = route == ERemoteRoutePriority.Ignore ? 0 : route == ERemoteRoutePriority.Prioritize ? 5 : 4;
-            Require(_returnBound(new StationComponent { routePriority = route }) == maximum,
-                "return cargo retains native priority selection on both dispatch and waiting ticks");
-        }
-        var native = new StationComponent { priorityLocks = new[] { new StationPriorityLock { priorityIndex = 4, lockTick = 60 } } };
-        var observed = new StationComponent { priorityLocks = (StationPriorityLock[])native.priorityLocks.Clone() };
-        for (int tick = 0; tick < 1831; tick++)
-        {
-            DispatchScheduler.AgeLocks = tick % 30 == 0;
-            if (DispatchScheduler.AgeLocks) _nativeAge(native);
-            _patchedAge(observed);
-            Require(native.priorityLocks[0].priorityIndex == observed.priorityLocks[0].priorityIndex && native.priorityLocks[0].lockTick == observed.priorityLocks[0].lockTick,
-                "native lock aging at factor 30 preserves byte countdown and zero/clear boundary");
-        }
-        var changed = PatchProcessor.GetOriginalInstructions(remote);
-        int agingIndex = changed.FindIndex(c => c.Calls(renderer)) + 1;
-        changed[agingIndex] = new CodeInstruction(OpCodes.Ldc_I4_1);
-        Require(PriorityClock.Transpiler(changed, null).SequenceEqual(changed) && DispatchScheduler.Failure != null, "unsupported aging block leaves the native body intact");
-        DispatchScheduler.Failure = null;
-        DispatchScheduler.Reset();
-        if (fullBindings)
-        {
-            var opt = new Harmony(LogisticsProfilerPlugin.OptGuid);
-            var profiler = new Harmony("org.fyyy.logisticsprofiler");
-            try
-            {
-                opt.CreateClassProcessor(typeof(PriorityClock)).Patch();
-                profiler.CreateClassProcessor(typeof(RemotePatch)).Patch();
-                Require(DispatchScheduler.Failure == null, "full flight-method patch binding with profiler");
-            }
-            finally { opt.UnpatchSelf(); LogisticsProfilerPlugin.Unpatch(profiler); }
-        }
-        Console.WriteLine("PASS: native return selection, scaled lock-aging IL, factor-30 byte limits, suspended aging, compatibility rejection and available full-method bindings.");
-    }
-
     private static long _schedulerTime;
     private static bool _throwDispatch;
     private static readonly List<(long Tick, int Priority, int Gid, float Sail, float Warp, int Carries)> Schedule = new List<(long, int, int, float, float, int)>();
@@ -276,9 +175,10 @@ internal static class Checks
             history = new GameHistoryData { logisticShipSailSpeed = 100, logisticShipWarpSpeed = 1000, logisticShipSpeedScale = 2, logisticShipCarries = 200, logisticShipWarpDrive = true },
             statistics = new GameStatData { production = new ProductionStatistics() }
         };
-        var transport = new GalacticTransport { gameData = data, stationPool = new StationComponent[75], stationCursor = 74 };
+        var transport = new GalacticTransport { gameData = data, stationPool = new StationComponent[375], stationCursor = 374 };
+        var routes = (ERemoteRoutePriority[])Enum.GetValues(typeof(ERemoteRoutePriority));
         for (int gid = 1; gid < transport.stationPool.Length; gid++)
-            transport.stationPool[gid] = new StationComponent { id = gid, gid = gid, routePriority = (ERemoteRoutePriority)(1 + gid % 4) };
+            transport.stationPool[gid] = new StationComponent { id = gid, gid = gid, routePriority = routes[gid % routes.Length] };
         transport.stationPool[12] = null;
         transport.stationPool[17].id = 0;
         transport.stationPool[23].gid = 24;
@@ -288,22 +188,21 @@ internal static class Checks
         try
         {
             recorder.Patch(AccessTools.Method(typeof(StationComponent), "DetermineDispatch"), prefix: new HarmonyMethod(typeof(Checks), nameof(RecordDispatch)));
-            Action<int> run = scale => {
+            Action run = () => {
                 Schedule.Clear();
-                DispatchScheduler.Reset();
-                var native = new StationComponent { priorityLocks = new[] { new StationPriorityLock { priorityIndex = 4, lockTick = 60 } } };
-                var observed = new StationComponent { priorityLocks = (StationPriorityLock[])native.priorityLocks.Clone() };
                 for (_schedulerTime = 0; _schedulerTime < 1800; _schedulerTime++)
-                {
                     transport.GameTick(_schedulerTime);
-                    Require(DispatchScheduler.AgeLocks == (_schedulerTime % scale == 0), "lock aging and complete native dispatch share a clock");
-                    if (_schedulerTime % scale == 0) _nativeAge(native);
-                    _patchedAge(observed);
-                    Require(native.priorityLocks[0].Equals(observed.priorityLocks[0]), "scheduled native lock countdown matches scaled reference");
-                }
             };
-            run(1);
+            run();
             var vanilla = Schedule.ToArray();
+            var all = vanilla.Where(v => v.Tick == 0).ToArray();
+            // Native tick zero supplies route eligibility, ordering and arguments. Each
+            // station's public phase contract independently supplies its expected times.
+            Func<long, int, IEnumerable<(long Tick, int Priority, int Gid, float Sail, float Warp, int Carries)>> expected = (tick, factor) =>
+                all.Where(v => {
+                    int period = (v.Priority == 1 ? 10 : v.Priority == 2 || v.Priority == 3 ? 30 : 60) * factor;
+                    return tick % period == (factor == 1 ? 0 : (v.Gid - 1) % period);
+                }).Select(v => (tick, v.Priority, v.Gid, v.Sail, v.Warp, v.Carries));
             opt.CreateClassProcessor(typeof(DispatchScheduler)).Patch();
             profiler.CreateClassProcessor(typeof(SchedulerPatch)).Patch();
             foreach (bool enabled in new[] { false, true })
@@ -313,55 +212,63 @@ internal static class Checks
                 DispatchScheduler.Factor = factor;
                 var capture = new Capture(1);
                 LogisticsProfilerPlugin.Current = capture;
-                int scale = enabled ? factor : 1;
-                run(scale);
+                run();
                 LogisticsProfilerPlugin.Current = null;
                 Require(capture.Stop() && capture.Methods[0].Samples == 1800 && capture.Methods[0].Errors == 0, "scheduler instrumentation drains");
-                Require(capture.Methods[0].Skipped == 1800 - 1800 / scale, "profiler observes skipped waiting ticks and executed native sweeps");
-                Require(capture.Phases.All(p => p.Samples == 30), "profiler phases use simulation time rather than the dispatch clock");
-                var expected = vanilla.Where(v => v.Tick * scale < 1800).Select(v => (v.Tick * scale, v.Priority, v.Gid, v.Sail, v.Warp, v.Carries));
-                Require(expected.SequenceEqual(Schedule), "all routes keep scaled native cadence, global order and dispatch arguments");
+                bool dispersed = enabled && factor > 1;
+                Require(capture.Methods[0].Skipped == (dispersed ? 1800 : 0), "profiler distinguishes replacement scheduler from native body");
+                Require(capture.Phases.All(p => p.Samples == 30), "profiler phases retain actual simulation time");
+                var reference = Enumerable.Range(0, 1800).SelectMany(tick => expected(tick, dispersed ? factor : 1));
+                Require(reference.SequenceEqual(Schedule), "all routes preserve GID phases, cadence, eligibility, order within each tick and dispatch arguments");
+                if (dispersed)
+                {
+                    Require(Schedule.Count * factor == vanilla.Length, "full cycles perform exactly 1/N dispatch checks");
+                    Require(Schedule.GroupBy(v => v.Tick).Max(g => g.Count()) < vanilla.GroupBy(v => v.Tick).Max(g => g.Count()),
+                        "station visits are spread across ticks");
+                }
             }
-            DispatchScheduler.Reset();
+            foreach (var step in new[] { (1701L, true, 5), (1702L, true, 2), (60L, true, 1), (long.MaxValue - 7, true, 30), (1L, true, 5), (120L, false, 5) })
+            {
+                _schedulerTime = step.Item1;
+                DispatchOptimization.Enabled = step.Item2;
+                DispatchScheduler.Factor = step.Item3;
+                Schedule.Clear();
+                transport.GameTick(_schedulerTime);
+                Require(expected(_schedulerTime, step.Item2 ? step.Item3 : 1).SequenceEqual(Schedule), "settings and time changes apply on the next tick without stale scan state");
+            }
+            DispatchOptimization.Enabled = true;
             DispatchScheduler.Factor = 5;
+            DispatchOptimization.Failure = "unsupported dispatch witness";
             Schedule.Clear();
+            _schedulerTime = 120;
+            transport.GameTick(_schedulerTime);
+            Require(expected(_schedulerTime, 1).SequenceEqual(Schedule), "unsupported dispatch patch retains the native scheduler");
+            DispatchOptimization.Failure = null;
+
+            _schedulerTime = 0;
             _throwDispatch = true;
             bool threw = false;
             var failed = new Capture(1);
             LogisticsProfilerPlugin.Current = failed;
-            try { transport.GameTick(1600); } catch (InvalidOperationException) { threw = true; }
+            try { transport.GameTick(_schedulerTime); } catch (InvalidOperationException) { threw = true; }
             LogisticsProfilerPlugin.Current = null;
-            Require(threw && failed.Stop() && failed.Methods[0].Errors == 1, "native dispatch exception propagates and releases profiler sample");
-            DispatchScheduler.Reset();
-            transport.GameTick(1700);
-            transport.GameTick(1701);
-            Require(!DispatchScheduler.AgeLocks, "factor change starts between logical ticks");
-            DispatchScheduler.Factor = 1;
+            Require(threw && failed.Stop() && failed.Methods[0].Errors == 1, "dispatch exception propagates and releases profiler sample");
             Schedule.Clear();
-            transport.GameTick(1800);
-            Require(Schedule.Count == vanilla.Count(v => v.Tick == 0) && DispatchScheduler.AgeLocks, "factor one restores native scheduling and aging");
-            DispatchScheduler.Factor = 30;
+            _schedulerTime = 1;
+            transport.GameTick(_schedulerTime);
+            Require(expected(_schedulerTime, 5).SequenceEqual(Schedule), "next tick has no unfinished scan after an exception");
+
+            transport.stationPool[1] = null;
+            transport.stationCursor = 31;
             Schedule.Clear();
+            _schedulerTime = 0;
+            transport.GameTick(_schedulerTime);
+            Require(expected(_schedulerTime, 5).Where(v => v.Gid != 1 && v.Gid < 31).SequenceEqual(Schedule), "current pool bounds and deleted stations take effect immediately");
             data.history.logisticShipWarpDrive = false;
-            transport.GameTick(10);
-            Require(Schedule.Count == vanilla.Count(v => v.Tick == 0) && Schedule.All(v => v.Warp == v.Sail), "time reset starts a fresh ordered sweep and preserves non-warp speed");
-            transport.GameTick(11);
-            DispatchOptimization.Enabled = false;
             Schedule.Clear();
-            transport.GameTick(60);
-            Require(Schedule.Count == vanilla.Count(v => v.Tick == 0) && DispatchScheduler.AgeLocks, "disabled mode restores native scheduling and aging");
-            DispatchOptimization.Enabled = true;
-            DispatchScheduler.Failure = "unsupported aging witness";
-            Schedule.Clear();
-            transport.GameTick(120);
-            Require(Schedule.Count == vanilla.Count(v => v.Tick == 0) && DispatchScheduler.AgeLocks, "unsupported clock falls back to native scheduling and aging");
-            DispatchScheduler.Failure = null;
-            DispatchScheduler.Reset();
-            transport.GameTick(20);
-            transport.GameTick(21);
-            Require(!DispatchScheduler.AgeLocks, "unload starts between logical ticks");
-            transport.Free();
-            Require(transport.stationPool == null && DispatchScheduler.AgeLocks, "game unload releases scheduler owner and aging gate");
+            _schedulerTime = all.First(v => v.Gid > 1 && v.Gid < 31).Gid - 1;
+            transport.GameTick(_schedulerTime);
+            Require(Schedule.Count > 0 && Schedule.All(v => v.Warp == v.Sail), "non-warp ships use native sail speed");
         }
         finally
         {
@@ -370,10 +277,10 @@ internal static class Checks
             LogisticsProfilerPlugin.Unpatch(profiler);
             recorder.UnpatchSelf();
             DispatchOptimization.Enabled = false;
+            DispatchOptimization.Failure = null;
             DispatchScheduler.Factor = 1;
-            DispatchScheduler.Reset();
         }
-        Console.WriteLine("PASS: native all-route factors 1/2/5/30, shared lock clock, exceptions, configuration/time reset, compatibility fallback, unload and profiler integration.");
+        Console.WriteLine("PASS: 1.1.0 GID phase contract at factors 1/2/5/30, exact 1/N checks, live pool/config/time changes, fallback, exceptions and profiler integration.");
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]

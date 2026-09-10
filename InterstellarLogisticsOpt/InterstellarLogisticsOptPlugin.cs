@@ -22,17 +22,15 @@ public class InterstellarLogisticsOptPlugin : BaseUnityPlugin
             "Optimize interstellar dispatch / 优化星际物流派船");
         AmortizeFactor = Config.Bind("General", "AmortizeFactor", 1,
             new ConfigDescription(
-                "All-route scheduling multiplier. 1 = vanilla cadence. 2-30 slows the shared dispatch/priority-lock clock. Higher factors delay dispatch and may limit throughput. / 全航线调度间隔系数。1 为原版节奏；2-30 同步减慢派船和优先级锁时钟。较大系数会延迟派船，并可能限制吞吐。",
+                "All-route scheduling multiplier. 1 = vanilla cadence. At N > 1, stagger stations across ticks and run dispatch checks at 1/N frequency. Trades priority fidelity and responsiveness for lower CPU cost; may limit throughput. / 全航线调度间隔系数。1 为原版节奏；N > 1 时按塔错开调度，检查频率降为 1/N。以部分优先级准确性和响应速度换取更低 CPU 开销，可能限制吞吐。",
                 new AcceptableValueRange<int>(1, 30)));
         ModEnabled.SettingChanged += UpdateSettings;
         AmortizeFactor.SettingChanged += UpdateSettings;
         UpdateSettings(null, EventArgs.Empty);
         _harmony = new Harmony(PluginInfo.PLUGIN_GUID);
         _harmony.PatchAll(typeof(DispatchOptimization));
-        _harmony.PatchAll(typeof(PriorityClock));
         _harmony.PatchAll(typeof(DispatchScheduler));
         if (DispatchOptimization.Failure != null) Logger.LogWarning(DispatchOptimization.Failure);
-        if (DispatchScheduler.Failure != null) Logger.LogWarning(DispatchScheduler.Failure);
 
         I18N.Add("InterstellarLogisticsOpt", "InterstellarLogisticsOpt", "星际物流优化");
         I18N.Add("Optimize interstellar dispatch", "Optimize interstellar dispatch", "优化星际物流派船计算");
@@ -53,7 +51,6 @@ public class InterstellarLogisticsOptPlugin : BaseUnityPlugin
         if (ModEnabled != null) ModEnabled.SettingChanged -= UpdateSettings;
         if (AmortizeFactor != null) AmortizeFactor.SettingChanged -= UpdateSettings;
         DispatchOptimization.Enabled = false;
-        DispatchScheduler.Reset();
         _harmony?.UnpatchSelf();
     }
 

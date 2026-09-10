@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.Emit;
 using HarmonyLib;
 
 namespace InterstellarLogisticsOpt;
@@ -9,78 +6,40 @@ namespace InterstellarLogisticsOpt;
 internal static class DispatchScheduler
 {
     internal static volatile int Factor = 1;
-    internal static volatile bool AgeLocks = true;
-    internal static string Failure;
-    private static GalacticTransport _transport;
-    private static long _lastTime;
-    private static int _clock, _delay;
-
-    internal static void Reset()
-    {
-        _transport = null;
-        _clock = _delay = 0;
-        AgeLocks = true;
-    }
-
-    [HarmonyPrefix, HarmonyPatch(typeof(GalacticTransport), nameof(GalacticTransport.Free))]
-    private static void Free(GalacticTransport __instance)
-    {
-        if (_transport == __instance) Reset();
-    }
 
     [HarmonyPrefix]
-    private static bool Prefix(GalacticTransport __instance, ref long time)
+    private static bool Prefix(GalacticTransport __instance, long time)
     {
         int factor = Factor;
-        if (!DispatchOptimization.Enabled || factor <= 1 || Failure != null || DispatchOptimization.Failure != null)
-        {
-            Reset();
+        if (!DispatchOptimization.Enabled || factor <= 1 || !DispatchOptimization.SupportedGame || DispatchOptimization.Failure != null)
             return true;
-        }
-        if (_transport != __instance || time != _lastTime + 1)
-        {
-            Reset();
-            _transport = __instance;
-        }
-        _lastTime = time;
-        if (_delay > 0)
-        {
-            --_delay;
-            AgeLocks = false;
-            return false;
-        }
-        // Native GameTick owns the complete ordered sweep. Only its dispatch clock changes;
-        // factory transport workers age locks after the main-thread dispatch barrier.
-        time = _clock;
-        _clock = (_clock + 1) % 60;
-        _delay = factor - 1;
-        AgeLocks = true;
-        return true;
-    }
-}
 
-[HarmonyPatch(typeof(StationComponent), nameof(StationComponent.InternalTickRemote))]
-internal static class PriorityClock
-{
-    [HarmonyTranspiler]
-    internal static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions, ILGenerator generator)
-    {
-        var code = instructions.ToList();
-        var renderer = AccessTools.Method(typeof(StationComponent), nameof(StationComponent.ShipRenderersOnTick));
-        int tail = code.FindIndex(c => c.Calls(renderer)) + 1;
-        if (!DispatchOptimization.SupportedGame || tail <= 0 || tail >= code.Count || !code[tail].LoadsConstant(0) ||
-            code[code.Count - 1].opcode != OpCodes.Ret || code[tail].blocks.Count != 0)
+        var data = __instance.gameData;
+        var history = data.history;
+        float sail = history.logisticShipSailSpeedModified;
+        float warp = history.logisticShipWarpDrive ? history.logisticShipWarpSpeedModified : sail;
+        var stations = __instance.stationPool;
+
+        for (int pass = 1; pass <= 6; pass++)
         {
-            DispatchScheduler.Failure = "Unsupported InternalTickRemote body; amortized scheduling was not applied.";
-            return code;
+            int priority = pass % 6;
+            int period = (pass == 1 ? 10 : pass == 2 || pass == 3 ? 30 : 60) * factor;
+            // GID phases spread station visits, deliberately relaxing cross-station
+            // priority order. Native lock lifetimes and return loading remain unchanged.
+            int phase = (int)(time % period);
+            for (int gid = phase + 1; gid < __instance.stationCursor; gid += period)
+            {
+                var station = stations[gid];
+                if (station == null || station.id <= 0 || station.gid != gid) continue;
+                var route = station.routePriority;
+                bool eligible = priority == 0 ? route == ERemoteRoutePriority.Ignore :
+                    route == ERemoteRoutePriority.Prioritize ||
+                    priority <= 4 && (route == ERemoteRoutePriority.Only || route == ERemoteRoutePriority.Designated);
+                if (eligible)
+                    station.DetermineDispatch(sail, warp, history.logisticShipCarries, priority, stations,
+                        data.statistics.production.factoryStatPool, data.factories, data.galaxy, data.statistics.traffic);
+            }
         }
-        DispatchScheduler.Failure = null;
-        var done = generator.DefineLabel();
-        code[code.Count - 1].labels.Add(done);
-        var gate = new CodeInstruction(OpCodes.Ldsfld, AccessTools.Field(typeof(DispatchScheduler), nameof(DispatchScheduler.AgeLocks)));
-        gate.labels.AddRange(code[tail].labels);
-        code[tail].labels.Clear();
-        code.InsertRange(tail, new[] { gate, new CodeInstruction(OpCodes.Brfalse, done) });
-        return code;
+        return false;
     }
 }

@@ -2,28 +2,30 @@
 
 ## Release 1.2.0
 
-The release version is 1.2.0. Historical capture labels below identify the development binaries actually tested; they have not been relabeled. In particular, the early development build also called 1.2.0 has different behavior and a different hash from this release. Current behavior is maintained in [the package README](package/README.md), and cumulative changes from 1.1.0 are in [CHANGELOG.md](package/CHANGELOG.md).
+The release retains 1.1.0's station-ID phase dispersion, plus the dispatch-state fixes and redundant-read optimization. It accepts cross-station priority differences. Lock aging and return loading remain native; there is no dispatch budget, shared clock or suspended scan. [The package README](package/README.md) owns the behavior and tradeoffs, and [CHANGELOG.md](package/CHANGELOG.md) describes the changes from 1.1.0.
 
-Only version and description metadata, packaging and documentation changed after the latest game captures. The rebuilt assembly version is `1.2.0.0`, its BepInPlugin version and package manifest are `1.2.0`, and all eight top-level scheduler/clock/dispatch-optimization method bodies match the tested 1.3.1 DLL. Existing .NET Framework/Mono logic checks remain applicable. The Release build passed with zero warnings/errors. The ZIP root contains exactly the DLL, manifest, README, CHANGELOG and icon, with all bytes matching the build/source files.
+The .NET Framework and game Mono checks pass 5,952 native/optimized dispatch-state comparisons and 24 branch scenarios. Scheduler checks use native route eligibility and dispatch arguments, then verify the GID phase contract for factors 1/2/5/30 over 1,800 ticks, exact 1/N call counts over complete cycles, live pool/configuration/time changes, unsupported-patch fallback, exception propagation and profiler accounting. These are offline checks; they do not establish save-level UPS, spike reduction or delivery throughput.
+
+No game capture has yet tested this final combination. DSPGAME was running during the update, so its installed DLL was not replaced. test1 still has the earlier complete-sweep release candidate with SHA-256 `8AD99E75DD668D29767CEC941811FDD6E988163A4FD6BB4135043A243CA75FB6`; the new build needs a game restart and a fresh comparison using [the capture procedure](../LogisticsProfiler/README.md#对照实验). LogisticsProfiler remains 0.2.2.
 
 | Artifact | SHA-256 |
 |---|---|
-| Release 1.2.0 DLL | `9F3BD11F9062FDEE31C6AB1816F390756561FE0B35EF8F385CA32928B2DEAC7F` |
-| `package/InterstellarLogisticsOpt-1.2.0.zip` | `7A695E90BC0E0F66B2B1537EAF472F9FC917DB00156151F9B4844DDE204A344F` |
+| Release 1.2.0 DLL | `67BDE49941D7A49C277E04C004C76E32A9EAFD8501E8FA0354D37AA6B422BDE9` |
+| `package/InterstellarLogisticsOpt-1.2.0.zip` | `8C180E7D74040CBBFE3881B9F6A2C5069E6FC8AA601DC253F1C9E6F946825100` |
 
-The earlier development ZIP at that path is preserved as `InterstellarLogisticsOpt-1.2.0-development-20260909175208.zip`. After DSPGAME exited, release 1.2.0 was installed into test1 and its DLL hash verified against that build. The installed DLL remains `8AD99E75DD668D29767CEC941811FDD6E988163A4FD6BB4135043A243CA75FB6`, from before the assembly-description update. The previous DLL and config were backed up beside their originals with suffix `.20260909175543.bak`. Settings remain `Enabled=true, AmortizeFactor=5`; LogisticsProfiler remains 0.2.2.
+The release assembly is `1.2.0.0`, and the plugin and manifest versions are `1.2.0`. The package contains exactly the DLL, manifest, README, CHANGELOG and icon. The supplied screenshots remain unchanged; they show an earlier build and are not measurements of this final scheduler.
 
-The package includes the revised Chinese-first collapsed README and changelog. README screenshot assets are the supplied PNGs copied unchanged to `prior.png` (SHA-256 `82EEB533CD5A1718B050C81347D422CEAE7D005D4B9DC774FFD31CFC7F9A2345`) and `after.png` (`E7C4C1A4895D9279B8821CBBB93AB49131883EDB4CC678778A4ED2BB8CC18AB4`). They show SampleAndHoldSim Ratio 200 and are presented as disabled/enabled screenshots, not a version comparison or averaged profiler capture. The README and assembly-description updates leave runtime code unchanged. The existing GitHub raw-image URLs will show the replacement files after the repository images are published.
+All sections below describe historical binaries identified by their version labels and hashes. Development labels, including an earlier build also named 1.2.0, are not current release identities. Their measurements must not be attributed to the final phase-dispersed release.
 
-## Factor-5 comparison with 1.1.0
+## Historical factor-5 comparison: 1.1.0 versus complete sweeps
 
-| Metric | ILO 1.1.0 | Current 1.2.0 implementation |
+| Metric | ILO 1.1.0 | Complete-sweep candidate (1.3.1) |
 |---|---:|---:|
 | Scheduler mean, ms/tick | 2.435457 | 0.699808 |
 | Scheduler maximum, ms/call | 4.959900 | 161.906500 |
 | Observed UPS | 7.885003 | 8.160370 |
 
-The older capture is `20260909_223940_7611437`, using profiler 0.2.1. The newer capture is `20260910_004319_6959255`, using profiler 0.2.2 and development label 1.3.1; its scheduling implementation is the one released as 1.2.0. Both use factor 5, detailed 1/64 sampling, 180-second windows and SAHS period 1.
+The older capture is `20260909_223940_7611437`, using profiler 0.2.1. The newer capture is `20260910_004319_6959255`, using profiler 0.2.2 and development label 1.3.1; this complete-sweep scheduler has since been superseded. Both use factor 5, detailed 1/64 sampling, 180-second windows and SAHS period 1.
 
 The newer capture has 71.3% lower average scheduler time and 3.5% higher observed UPS, but a substantially higher scheduler maximum. The complete ordered sweeps retain the priority protocol and can concentrate work into a single tick. Different starting stock/order states and profiler versions prevent treating these differences as a controlled version-to-version speedup. The observations support lower mean dispatch cost, not uniformly better frame times or proven delivery throughput. The README screenshots use a different SAHS setting and do not establish these version differences.
 
@@ -50,7 +52,7 @@ All 41,194 station/priority rows reconcile with the summaries: sample and branch
 | Sampled new launches | 477 | 429 |
 | Estimated remote-update time, ms/tick | 34.017459 | 32.291927 |
 
-The observed scheduler mean falls 89.1% and its maximum falls 38.0%, while UPS rises 3.1%. These are within-run observations with changed stock/order states, not isolated causal estimates. The remaining 161.9 ms scheduler maximum is consistent with complete sweeps; spike removal is outside the current implementation's contract.
+The observed scheduler mean falls 89.1% and its maximum falls 38.0%, while UPS rises 3.1%. These are within-run observations with changed stock/order states, not isolated causal estimates. The remaining 161.9 ms scheduler maximum is consistent with complete sweeps; this candidate did not split sweeps across ticks.
 
 Sampled launches fall 10.1% in total, or 12.8% per simulation tick. Their P2/P3/P5 totals are 196/233/48 while disabled and 186/212/31 at factor 5. This does not establish an equal change in delivery throughput: launches are sampled, cargo amounts and return loading are not measured, and the starting states differ. Each capture covers only about 24 seconds of simulated time. P0 has no samples and every P1/P4 sample has an empty candidate interval, leaving live successful dispatch for those priorities unexercised in this save.
 
@@ -119,7 +121,7 @@ The observed scheduler maximum falls 98.5%, while its mean falls 5.3% and UPS ch
 
 The throughput tradeoff needs attention. Dispatch samples per simulation tick are 35.0% lower with budget 2; sampled launches are 21.5% lower in total, or 21.8% lower after tick normalization. These observations are consistent with the scheduler's shared clock pausing during sliced sweeps. They are not proof of an equal reduction in deliveries: calls and launches are sampled, the two windows cover different inventory/order states, and return cargo and delivered amounts are not measured. P1/P4 have empty candidate intervals in every sample, and P0 has no samples, so this save does not exercise successful dispatch for those priorities. Each capture spans only about 25 seconds of simulated time at 60 ticks per simulated second.
 
-Budget 2 demonstrated spike reduction together with fewer sampled dispatches and launches; it did not establish acceptable sustained throughput. These captures document the slicing implementation retired in 1.3.1. The current comparison procedure uses complete sweeps and is maintained in [LogisticsProfiler/README.md](../LogisticsProfiler/README.md#对照实验).
+Budget 2 demonstrated spike reduction together with fewer sampled dispatches and launches; it did not establish acceptable sustained throughput. These captures document the slicing implementation retired in 1.3.1. The comparison procedure for the current release is maintained in [LogisticsProfiler/README.md](../LogisticsProfiler/README.md#对照实验).
 
 Source directory: `test1/BepInEx/LogisticsProfiler`. SHA-256 identities:
 
@@ -216,7 +218,7 @@ The executable also measures synthetic rings of 1,024 identical failing candidat
 
 These reductions are **not save-level CPU/UPS gains**. P3's actual redundant-lock fraction was not measured by 0.2.1. The new version also restores work that 1.1.0 incorrectly skipped, so its performance cannot be inferred from the old enabled/factor-5 captures. No frame-spike removal is promised with vanilla cadence.
 
-One subsequent enabled 1.2.0 capture is analyzed above; there is no same-version disabled pair or long-term delivery acceptance. The current 1.2.1 acceptance procedure is maintained at the top of this document. Build/test commands are maintained in [LogisticsProfiler/README.md](../LogisticsProfiler/README.md#构建与离线检查).
+One subsequent enabled 1.2.0 capture is analyzed above; there is no same-version disabled pair or long-term delivery acceptance. The current release and its validation scope are described at the top of this document. Build/test commands are maintained in [LogisticsProfiler/README.md](../LogisticsProfiler/README.md#构建与离线检查).
 
 ## Detailed dispatch captures: LogisticsProfiler 0.2.1
 
