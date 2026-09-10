@@ -6,14 +6,14 @@ The release retains 1.1.0's station-ID phase dispersion, plus the dispatch-state
 
 The .NET Framework and game Mono checks pass 5,952 native/optimized dispatch-state comparisons and 24 branch scenarios. Scheduler checks use native route eligibility and dispatch arguments, then verify the GID phase contract for factors 1/2/5/30 over 1,800 ticks, exact 1/N call counts over complete cycles, live pool/configuration/time changes, unsupported-patch fallback, exception propagation and profiler accounting. These are offline checks; they do not establish save-level UPS, spike reduction or delivery throughput.
 
-No game capture has yet tested this final combination. After DSPGAME exited, the release DLL listed below was installed into test1 and its SHA-256 verified against the build. The previous DLL (`8AD99E75DD668D29767CEC941811FDD6E988163A4FD6BB4135043A243CA75FB6`) and config were backed up beside their originals with suffix `.20260909191008.bak`. Settings remain `Enabled=true, AmortizeFactor=5`; LogisticsProfiler remains 0.2.2. A fresh comparison should follow [the capture procedure](../LogisticsProfiler/README.md#对照实验).
+After DSPGAME exited, the release DLL listed below was installed into test1 and its SHA-256 verified against the build. The previous DLL (`8AD99E75DD668D29767CEC941811FDD6E988163A4FD6BB4135043A243CA75FB6`) and config were backed up beside their originals with suffix `.20260909191008.bak`. Settings remain `Enabled=true, AmortizeFactor=5`; LogisticsProfiler remains 0.2.2. Profiler comparisons should follow [the capture procedure](../LogisticsProfiler/README.md#对照实验).
 
 | Artifact | SHA-256 |
 |---|---|
 | Release 1.2.0 DLL | `67BDE49941D7A49C277E04C004C76E32A9EAFD8501E8FA0354D37AA6B422BDE9` |
 | `package/InterstellarLogisticsOpt-1.2.0.zip` | `8C180E7D74040CBBFE3881B9F6A2C5069E6FC8AA601DC253F1C9E6F946825100` |
 
-The release assembly is `1.2.0.0`, and the plugin and manifest versions are `1.2.0`. The package contains exactly the DLL, manifest, README, CHANGELOG and icon. The supplied screenshots remain unchanged; they show an earlier build and are not measurements of this final scheduler.
+The release assembly is `1.2.0.0`, and the plugin and manifest versions are `1.2.0`. The package contains exactly the DLL, manifest, README, CHANGELOG and icon. [The package README](package/README.md) shows the latest in-game performance screenshots and their panel readings.
 
 All sections below describe historical binaries identified by their version labels and hashes. Development labels, including an earlier build also named 1.2.0, are not current release identities. Their measurements must not be attributed to the final phase-dispersed release.
 
