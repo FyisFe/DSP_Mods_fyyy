@@ -10,8 +10,8 @@ All notable changes to DashboardOverhaul are documented here.
 - 删除含图表的页面时，确认框显示页名、图表数量，以及统计项仍保留在侧栏。/ Deleting a page with charts shows its name, chart count and retained sidebar statistics in the confirmation.
 - 图表菜单明确区分“移除此图表”和“删除统计项及其全部图表”；重命名与删除统计项时显示关联图表数量，并同步名称提示。/ The chart menu distinguishes removing one chart from deleting a statistic and all its charts; rename and delete show the affected count, and name tooltips update.
 - 移动图表后可前往目标页并高亮图表；目标页无空位时原图表保持不变。/ After moving a chart, the notice can open its destination and highlight it; a full destination leaves the original chart unchanged.
-- 空白页可打开统计窗口、通过侧栏添加图表，或复制其他页面的布局和显示设置。/ Empty pages can open statistics, add charts through the sidebar or copy another page's layout and display settings.
-- 页签和统计项名称编辑支持 Esc 取消，失焦或切页提交；编辑目标被回收时取消未提交内容。/ Page and statistic rename inputs support Esc to cancel and focus loss or page switching to commit; recycling the target cancels pending edits.
+- 空白页新增打开统计窗口、打开侧栏及复制其他非空页面的入口；复制布局和显示设置，统计项仍共享。/ Empty pages now offer shortcuts to statistics, the sidebar and copying a populated page; copies share statistics but keep independent display settings.
+- 名称编辑新增 Esc 取消与切页前提交；图表回收时取消未提交的统计项名称编辑。/ Name editing now cancels on Esc and commits before a page switch; recycling a chart cancels its pending statistic rename.
 
 ## [1.2.0] - 2026-06-22
 

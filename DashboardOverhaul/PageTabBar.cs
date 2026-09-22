@@ -52,6 +52,8 @@ public class PageTabBar
         Dashboard = dashboard;
         _font = dashboard.emptyTip != null ? dashboard.emptyTip.font : null;
         if (_font == null) DashboardOverhaulPlugin.Logger.LogWarning("[DashboardOverhaul] emptyTip/font is null; tab labels may be invisible.");
+        // Vanilla toggles this GameObject in _OnUpdate; hide its Text without a per-frame active-state flip.
+        if (dashboard.emptyTip != null) dashboard.emptyTip.enabled = false;
 
         // Keep the grid and charts aligned; the native sidebar overlays them.
         _content = (RectTransform)new GameObject("DO_Content", typeof(RectTransform)).transform;
@@ -721,7 +723,6 @@ public class PageTabBar
         if (_emptyPanel == null || !PageOps.IsValidViewPage(Dashboard.charts)) return;
         var charts = Dashboard.charts;
         var current = charts.dashboardLayout.pages[charts.currentView.pageIndex];
-        Dashboard.emptyTip.gameObject.SetActive(false);
         bool empty = current.chartDatas.Count == 0;
         if (_emptyPanel.gameObject.activeSelf != empty) _emptyPanel.gameObject.SetActive(empty);
         if (!empty) return;
