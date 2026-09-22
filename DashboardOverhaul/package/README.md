@@ -38,23 +38,23 @@ A series of enhancements for the in-game **Dashboard**. No extra mod dependencie
 顶部标签整理不同主题的页面；空白页提供打开统计窗口、添加图表和复制其他页面的入口。背景与网格保持固定，侧栏仍使用原生箭头开关。
 Organize pages by topic with the top tabs. Empty-page actions open statistics, add charts or copy another page. The background and grid stay fixed, and the sidebar keeps its native arrow toggle.
 
-![空白页与顶部标签 / Empty page and top tabs](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/DashboardOverhaul/screenshots/dashboard-empty.png)
+![空白页与顶部标签 / Empty page and top tabs](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/d766eb82171c90ddf4128f290a3e8a4bb4a248bf/DashboardOverhaul/screenshots/dashboard-empty.png)
 
 ### 页面管理 / Page management
 
 悬停查看完整页名和操作提示；单击切换、双击重命名、右键管理、拖动排序。
 Hover for the full page name and controls: click to switch, double-click to rename, right-click to manage, or drag to reorder.
 
-![页签悬停提示 / Page tab tooltip](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/DashboardOverhaul/screenshots/tab-tooltip.png)
+![页签悬停提示 / Page tab tooltip](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/d766eb82171c90ddf4128f290a3e8a4bb4a248bf/DashboardOverhaul/screenshots/tab-tooltip.png)
 
 拖动页签调整顺序，再通过右键菜单重命名：
 Reorder a page by dragging its tab, then rename it from the context menu:
 
-![页签排序与重命名 / Reorder and rename page tabs](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/DashboardOverhaul/screenshots/page-management.gif)
+![页签排序与重命名 / Reorder and rename page tabs](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/d766eb82171c90ddf4128f290a3e8a4bb4a248bf/DashboardOverhaul/screenshots/page-management.gif)
 
 ### 添加与整理图表 / Add and organize charts
 
 从空白页打开统计窗口并添加图表，再通过图表右键菜单移动到其他页面。移动后的提示提供“前往”入口，方便继续整理目标页。
 Open statistics from an empty page, add a chart, and move it to another page from its context menu. The move notice offers a shortcut to the destination page.
 
-![添加图表与跨页移动 / Add a chart and move it between pages](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/DashboardOverhaul/screenshots/chart-workflow.gif)
+![添加图表与跨页移动 / Add a chart and move it between pages](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/d766eb82171c90ddf4128f290a3e8a4bb4a248bf/DashboardOverhaul/screenshots/chart-workflow.gif)
