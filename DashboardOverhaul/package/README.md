@@ -1,7 +1,7 @@
 # DashboardOverhaul
 
-为游戏内**仪表盘**提供最多 9 个可切换页面。页面、页名及顺序随存档保存。仅依赖 BepInEx，不更改存档格式，安装后自动生效。
-Adds up to nine switchable Dashboard pages. Pages, names and order persist in the save. Requires only BepInEx, does not change the save format, and runs automatically.
+为游戏内**仪表盘**提供最多 9 个可切换页面。页面、页名及顺序随存档保存。
+Adds up to nine switchable Dashboard pages. Pages, names and order persist in the save.
 
 ## 使用 / How to use
 
