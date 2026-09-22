@@ -6,9 +6,10 @@
     <AssemblyName>DashboardOverhaul</AssemblyName>
     <BepInExPluginGuid>org.fyyy.dashboardoverhaul</BepInExPluginGuid>
     <Description>A series of enhancements for the in-game Dashboard / 为游戏内仪表盘提供一系列优化</Description>
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
+    <DefaultItemExcludes>$(DefaultItemExcludes);tests/**</DefaultItemExcludes>
     <RestoreAdditionalProjectSources>https://nuget.bepinex.dev/v3/index.json</RestoreAdditionalProjectSources>
   </PropertyGroup>
 
@@ -36,8 +37,7 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Release'">
-    <Exec Command="del /F /Q package\$(ProjectName)-$(Version).zip
-powershell Compress-Archive -Force -DestinationPath 'package/$(ProjectName)-$(Version).zip' -Path &quot;$(TargetPath)&quot;, package/icon.png, package/manifest.json, package/README.md, package/CHANGELOG.md" />
+    <Exec Command="powershell -NoProfile -NonInteractive -Command &quot;Compress-Archive -Force -DestinationPath 'package/$(ProjectName)-$(Version).zip' -LiteralPath '$(TargetPath)', 'package/icon.png', 'package/manifest.json', 'package/README.md', 'package/CHANGELOG.md'&quot;" />
   </Target>
 
 </Project>

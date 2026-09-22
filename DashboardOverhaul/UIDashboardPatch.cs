@@ -14,36 +14,41 @@ public static class UIDashboardPatch
         Bar.Build(__instance);
     }
 
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(UIDashboard), "_OnOpen")]
+    static void OnOpen_Prefix(UIDashboard __instance) => PageOps.EnsureViewPage(__instance.charts);
+
     [HarmonyPostfix]
     [HarmonyPatch(typeof(UIDashboard), "_OnOpen")]
-    static void OnOpen_Postfix(UIDashboard __instance)
+    static void OnOpen_Postfix() => Bar?.Refresh();
+
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(UIDashboard), nameof(UIDashboard.SetViewPage))]
+    static void SetViewPage_Prefix(UIDashboard __instance)
     {
-        // Defense-in-depth: if a save's currentView.pageIndex points at a deleted/
-        // out-of-range slot (possible via external save edits, an older mod version,
-        // or a future regression), vanilla CustomCharts.PrepareTick dereferences
-        // pages[pageIndex] with no null check, and it runs in the sim loop outside
-        // the UI try/catch -- a hard crash. Repointing an invalid current page to the
-        // first active page on open avoids it entirely.
-        if (__instance != null && !PageOps.IsValidViewPage(__instance.charts))
-        {
-            int target = PageOps.FirstActiveSlot(__instance.charts?.dashboardLayout);
-            if (target > 0) __instance.SetViewPage(target);
-        }
-        if (Bar != null) Bar.Refresh();
+        Bar?.FinishRename();
+        ChartRename.Finish();
+        __instance.CloseChartPopupMenu();
     }
+
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(UIDashboard), "_OnClose")]
+    static void OnClose_Prefix() => Bar?.Close();
+
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(UIDashboard), "_OnFree")]
+    static void OnFree_Prefix() => Bar?.Close();
 
     [HarmonyPostfix]
     [HarmonyPatch(typeof(UIDashboard), "_OnUpdate")]
-    static void OnUpdate_Postfix()
-    {
-        if (Bar != null) Bar.UpdateLayout();
-    }
+    static void OnUpdate_Postfix() => Bar?.UpdateLayout();
 
     [HarmonyPostfix]
     [HarmonyPatch(typeof(UIDashboard), "_OnDestroy")]
     static void OnDestroy_Postfix()
     {
-        if (Bar != null) { Bar.Free(); Bar = null; }
+        Bar?.Free();
+        Bar = null;
         ChartRename.Free();
     }
 }

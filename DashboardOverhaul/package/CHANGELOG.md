@@ -3,6 +3,17 @@
 All notable changes to DashboardOverhaul are documented here.
 本文件记录 DashboardOverhaul 的版本变更。
 
+## [1.3.0] - 2026-09-22
+
+- 顶部页签改为独立顶栏，按窗口宽度调整，并提供更大的点击区域、悬停/焦点状态和完整页名提示。/ The top tabs now use a separate responsive header with larger hit areas, hover/focus states and full-name tooltips.
+- 侧栏打开时覆盖固定位置的图表、背景和网格，不再推动它们。/ The sidebar now overlays charts, background and grid without shifting them.
+- 新页追加到末尾；达到 9 页上限或仅剩一页时禁用相应操作并提示原因。/ New pages append at the end; actions disabled at the nine-page limit or on the last page explain why.
+- 删除含图表的页面时，确认框显示页名、图表数量，以及统计项仍保留在侧栏。/ Deleting a page with charts shows its name, chart count and retained sidebar statistics in the confirmation.
+- 图表菜单明确区分“移除此图表”和“删除统计项及其全部图表”；重命名与删除统计项时显示关联图表数量，并同步名称提示。/ The chart menu distinguishes removing one chart from deleting a statistic and all its charts; rename and delete show the affected count, and name tooltips update.
+- 移动图表后可前往目标页并高亮图表；目标页无空位时原图表保持不变。/ After moving a chart, the notice can open its destination and highlight it; a full destination leaves the original chart unchanged.
+- 空白页新增打开统计窗口、打开侧栏及复制其他非空页面的入口；复制布局和显示设置，统计项仍共享。/ Empty pages now offer shortcuts to statistics, the sidebar and copying a populated page; copies share statistics but keep independent display settings.
+- 名称编辑新增 Esc 取消与切页前提交；图表回收时取消未提交的统计项名称编辑。/ Name editing now cancels on Esc and commits before a page switch; recycling a chart cancels its pending statistic rename.
+
 ## [1.2.0] - 2026-06-22
 
 页面重新排序 / Page reordering.

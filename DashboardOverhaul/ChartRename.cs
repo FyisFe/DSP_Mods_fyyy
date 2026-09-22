@@ -24,13 +24,12 @@ public static class ChartRename
         var statPlan = ResolveStatPlan(chart);
         if (statPlan == null) return;
 
+        UIDashboardPatch.Bar?.FinishRename();
+        Cancel();
         var input = EnsureInput(dash);
         _target = chart;
 
-        // Overlay the chart title's actual on-screen rectangle: pivot top-left, placed at the
-        // title's top-left world corner, sized to the title's width. (Setting position to the
-        // title's pivot — its centre — with a centre-pivot, fixed-width box misplaced it, since
-        // the title is a wide, centre-pivoted element.)
+        // Use world corners because the title and overlay have different parents and pivots.
         var inputRt = (RectTransform)input.transform;
         var titleRt = chart.titleText != null ? chart.titleText.rectTransform : chart.rectTrans;
         var parent = inputRt.parent as RectTransform;
@@ -54,6 +53,9 @@ public static class ChartRename
         input.text = statPlan.name ?? string.Empty;
         input.Select();
         input.ActivateInputField();
+        input.transform.SetAsLastSibling();
+        UIRealtimeTip.Popup(string.Format(Loc.L("重命名统计项，将影响 {0} 个图表", "Renaming this statistic affects {0} charts"),
+            PageOps.ChartCount(chart.charts, statPlan.id)));
     }
 
     /// <summary>Cancel an in-progress rename if it targets <paramref name="chart"/> (e.g. the chart
@@ -66,6 +68,7 @@ public static class ChartRename
     /// <summary>Destroy the shared input and drop references; call on dashboard teardown.</summary>
     public static void Free()
     {
+        Cancel();
         if (_input != null) Object.Destroy(_input.gameObject);
         _input = null;
         _target = null;
@@ -119,40 +122,26 @@ public static class ChartRename
     private static void Commit(string value)
     {
         var chart = _target;
+        bool canceled = _input != null && _input.wasCanceled;
         Hide();
+        if (canceled) return;
         var statPlan = ResolveStatPlan(chart);
         if (statPlan == null) return;
         string newName = (value ?? string.Empty).Trim();
         statPlan.Rename(ref newName);                 // fires onNameChanged -> chart title repaints
-        chart.TruncateStatPlanNameText();             // defensive title refresh
-        RefreshSidebarName(chart.uiDashboard, statPlan); // sync the sidebar entry's displayed name
     }
 
-    /// <summary>Update the sidebar entry's displayed name after a rename. DetermineEntryVisible does
-    /// NOT do this for an already-visible entry: ResetTarget early-returns on an unchanged id and
-    /// _Open() no-ops when the entry is already open, so the entry's nameInput keeps its old text.
-    /// We set it directly, mirroring UIStatPlanEntry._OnOpen (nameInput.text = name, or null -> the
-    /// "#id default-name" placeholder shows).</summary>
-    private static void RefreshSidebarName(UIDashboard dash, StatPlan statPlan)
+    public static void Finish()
     {
-        var statboard = dash != null ? dash.statboard : null;
-        if (statboard == null || statboard.objectEntryPool == null || statPlan == null) return;
-        var pool = statboard.objectEntryPool;
-        for (int i = 0; i < pool.Count; i++)
-        {
-            var e = pool[i];
-            if (e != null && e.statPlan != null && e.statPlan.id == statPlan.id && e.nameInput != null)
-                e.nameInput.text = string.IsNullOrEmpty(statPlan.name) ? null : statPlan.name;
-        }
+        if (_target != null) _input.DeactivateInputField();
     }
+
+    public static void Cancel() => Hide();
 
     private static void Hide()
     {
-        // Clear the target before deactivating: deactivating a focused InputField fires onEndEdit
-        // synchronously, so a re-entrant Commit must see a null target — otherwise a cancel (e.g.
-        // CancelIfTargeting just before a delete) would implicitly commit the pending text. Mirrors
-        // PageTabBar, which clears its rename guard before SetActive(false).
+        // Deselecting or disabling an InputField can synchronously re-enter Commit.
         _target = null;
-        if (_input != null) _input.gameObject.SetActive(false);
+        DashboardUi.HideInput(_input);
     }
 }

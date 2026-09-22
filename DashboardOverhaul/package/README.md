@@ -1,43 +1,41 @@
 # DashboardOverhaul
 
-为游戏内**仪表盘**提供一系列优化与改进。零额外依赖、不改存档格式、始终生效。
-A series of enhancements for the in-game **Dashboard**. No extra mod dependencies (BepInEx only), no save-format change, always on.
-
-## 功能 / Features
-
-- 顶部标签栏，最多 9 个页面 / Top tab bar, up to 9 pages
-- 切换 / 新建 / 删除 / 重命名 页面 / Switch · add · delete · rename pages
-- 把单个图表移动到其它页面 / Move an individual chart to another page
-- 页面与页名随存档保存 / Pages & names persist in your save
-- 重命名 / 删除 单个图表的统计项（图表右键菜单，或双击标题重命名）/ Rename · delete a chart's statistic (chart right-click menu, or double-click the title to rename)
-- 拖动页面标签重新排序 / Drag page tabs to reorder pages
+为游戏内**仪表盘**提供最多 9 个可切换页面。页面、页名及顺序随存档保存。
+Adds up to nine switchable Dashboard pages. Pages, names and order persist in the save.
 
 ## 使用 / How to use
 
-- 像往常一样打开仪表盘，标签栏出现在顶部 / Open the Dashboard as usual — the tab bar is at the top
-- **切换页面**：点击标签 / **Switch**: click a tab
-- **新建页面**：点击 `+` / **Add**: click `+`
-- **重命名**：双击标签，或 右键标签 → 重命名 / **Rename**: double-click a tab, or right-click → Rename
-- **删除页面**：右键标签 → 删除（有图表会先确认；至少保留一页）/ **Delete**: right-click a tab → Delete (confirms if it has charts; one page must remain)
-- **重新排序页面**：左右拖动标签（未命名页面的序号会随位置更新）/ **Reorder pages**: drag a tab left or right (an unnamed page's number follows its position)
-- **移动图表**：右键任意图表 → 移动到页面 → 选目标页 / **Move a chart**: right-click a chart → Move to page → pick a page
-- **重命名图表**：右键图表 → 重命名，或双击图表标题 / **Rename a chart**: right-click → Rename, or double-click the chart title
-- **删除统计项**：右键图表 → 删除统计项（会移除该统计项在所有页面的图表，有确认）/ **Delete statistic**: right-click → Delete statistic (removes that statistic's charts on every page; confirms first)
+- **页面**：单击顶部页签切换；双击页签或从右键菜单重命名；拖动页签排序。悬停可查看完整页名和操作提示。/ **Pages**: click a top tab to switch, double-click or choose Rename from its right-click menu, and drag to reorder. Hover for the full page name and controls.
+- **新建页面**：点击 `+` 在末尾添加空白页；达到 9 页上限时按钮禁用并显示原因。/ **Add a page**: click `+` to append an empty page. At the nine-page limit, the button is disabled with an explanation.
+- **删除页面**：右键页签选择“删除页面”。有图表时确认框显示页名及图表数量；统计项仍保留在侧栏。最后一页不能删除。/ **Delete a page**: choose Delete page from its right-click menu. If it has charts, a confirmation shows the page name and chart count; statistics remain in the sidebar. The last page cannot be deleted.
+- **侧栏**：使用游戏原生箭头开合侧栏。侧栏覆盖图表，图表、背景和网格保持原位；页签位于图表及侧栏菜单上方。/ **Sidebar**: use the game's native arrow to toggle it. The sidebar overlays charts while the charts, background and grid stay in place; tabs remain above charts and sidebar menus.
+- **空白页**：没有统计项时可打开统计窗口；已有统计项时可打开侧栏添加图表。有其他非空页面时，可复制其布局和显示设置；复制的图表与原页共用统计项。/ **Empty pages**: open the statistics window if no statistics exist, or open the sidebar to add charts from existing statistics. If another page has charts, copy its layout and display settings; the copied charts share their statistics with the source.
+- **移动图表**：右键图表选择“移动到页面”和目标页；完成后的“前往”可切页并高亮该图表。目标页没有空位时，图表留在原页。/ **Move a chart**: choose Move to page and a destination from the chart menu. The resulting Go to page action switches pages and highlights the chart. If there is no room, the chart stays on its original page.
+- **重命名统计项**：右键图表选择“重命名统计项”，或双击图表标题；菜单或提示显示关联图表数量。该统计项的图表标题、提示及侧栏名称同步更新。/ **Rename a statistic**: choose Rename statistic from the chart menu or double-click its title. The menu or notice shows the affected chart count; chart titles, tooltips and the sidebar name update together.
+- **移除图表或删除统计项**：图表菜单中的“移除此图表”只移除当前图表；“删除统计项及其全部图表”会确认名称和影响数量，并移除其他页面、监控视图中的关联图表及侧栏统计项。/ **Remove a chart or delete a statistic**: Remove this chart affects only the current chart. Delete statistic and all its charts confirms the name and affected count, then removes associated charts on other pages and in watch views, along with the sidebar statistic.
+- **编辑名称**：Enter 提交，Esc 取消；失焦或切页提交，关闭仪表盘或回收目标图表时取消未完成的编辑。/ **Edit names**: Enter commits and Esc cancels. Losing focus or switching pages commits; closing the dashboard or recycling the target chart cancels unfinished edits.
 
-## 截图 / Screenshots
+## 界面与操作演示 / Screenshots & demos
 
-页面标签 + 右键菜单 / Page tabs + context menu:
+### 空白页 / Empty page
 
-![Page tabs and context menu](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/DashboardOverhaul/screenshots/tab-menu.png)
+![空白页与顶部标签 / Empty page and top tabs](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/d766eb82171c90ddf4128f290a3e8a4bb4a248bf/DashboardOverhaul/screenshots/dashboard-empty.png)
 
-拖动标签重新排序页面 / Drag a tab to reorder pages:
+### 页面管理 / Page management
 
-![Drag page tabs to reorder](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/DashboardOverhaul/screenshots/page-drag-reorder.gif)
+悬停页签可查看完整页名和操作提示。
+Hover over a tab for its full name and controls.
 
-把图表移动到其它页面 / Move a chart to another page:
+![页签悬停提示 / Page tab tooltip](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/d766eb82171c90ddf4128f290a3e8a4bb4a248bf/DashboardOverhaul/screenshots/tab-tooltip.png)
 
-![Move chart to page](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/DashboardOverhaul/screenshots/move-to-page.png)
+拖动页签调整顺序，再从右键菜单重命名。
+Drag a tab to reorder the pages, then rename it from the right-click menu.
 
-在图表上直接重命名统计项（双击标题或右键 → 重命名）/ Rename a chart's statistic in place (double-click the title, or right-click → Rename):
+![页签排序与重命名 / Reorder and rename page tabs](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/d766eb82171c90ddf4128f290a3e8a4bb4a248bf/DashboardOverhaul/screenshots/page-management.gif)
 
-![Rename a chart in place](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/master/DashboardOverhaul/screenshots/chart-rename.png)
+### 图表操作 / Chart actions
+
+从空白页打开统计窗口、添加图表并移至另一页；移动提示可前往目标页。演示末尾显示删除统计项的确认。
+Open statistics from an empty page, add a chart and move it to another page. The move notice offers navigation to the destination; the demo ends with a statistic-deletion confirmation.
+
+![添加图表、跨页移动和删除统计项 / Add a chart, move it and delete its statistic](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/d766eb82171c90ddf4128f290a3e8a4bb4a248bf/DashboardOverhaul/screenshots/chart-workflow.gif)
