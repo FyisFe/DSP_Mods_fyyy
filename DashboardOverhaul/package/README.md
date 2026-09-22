@@ -19,9 +19,6 @@ Adds up to nine switchable Dashboard pages. Pages, names and order persist in th
 
 ### 空白页 / Empty page
 
-没有统计项时，空白页引导打开统计窗口；已有统计项时，可打开侧栏添加图表。有其他非空页面时，“复制其他页面”才可用。
-With no statistics, the empty page opens the statistics window. When statistics exist, it opens the sidebar to add charts. Copy another page becomes available when another page has charts.
-
 ![空白页与顶部标签 / Empty page and top tabs](https://raw.githubusercontent.com/FyisFe/DSP_Mods_fyyy/d766eb82171c90ddf4128f290a3e8a4bb4a248bf/DashboardOverhaul/screenshots/dashboard-empty.png)
 
 ### 页面管理 / Page management
