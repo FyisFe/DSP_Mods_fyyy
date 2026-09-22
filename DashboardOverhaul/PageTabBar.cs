@@ -43,7 +43,7 @@ public class PageTabBar
     private const float kDragChipMaxWidth = 120f; // while dragging, the lifted tab shrinks to this cap so a long title doesn't cover the row
     private const float kTabHPadding = 20f; // sum of 10px left + 10px right text padding
     private const float kHeaderHeight = 44f;
-    private const float kChartLeftMargin = 32f; // Native handle is 20px wide; leave its hit area clear of chart resize handles.
+    private const float kChartLeftMargin = 32f; // Keep chart resize handles clear of the native handle when the sidebar is closed.
     private const float kBaseLeftMargin = 4f;
     private const float kTopOffset = -4f;
 
@@ -53,7 +53,7 @@ public class PageTabBar
         _font = dashboard.emptyTip != null ? dashboard.emptyTip.font : null;
         if (_font == null) DashboardOverhaulPlugin.Logger.LogWarning("[DashboardOverhaul] emptyTip/font is null; tab labels may be invisible.");
 
-        // Keep the background fixed; only the chart layer pans clear of the sidebar.
+        // Keep the grid and charts aligned; the native sidebar overlays them.
         _content = (RectTransform)new GameObject("DO_Content", typeof(RectTransform)).transform;
         _content.SetParent(dashboard.rectTrans, false);
         _content.SetAsFirstSibling();
@@ -145,17 +145,9 @@ public class PageTabBar
         Dashboard = null;
     }
 
-    private static float ContentLeft(float sidebarWidth, float sidebarX) =>
-        Mathf.Max(0f, sidebarWidth + sidebarX) + kChartLeftMargin;
-
-    /// <summary>Fit the header and keep charts clear of the native sidebar handle.</summary>
     public void UpdateLayout()
     {
         if (_root == null || Dashboard == null) return;
-        var sidebar = Dashboard.statboardTestRt;
-        Dashboard.chartContentRt.anchoredPosition = new Vector2(
-            ContentLeft(sidebar.rect.width, sidebar.anchoredPosition.x) - kChartLeftMargin,
-            Dashboard.chartContentRt.anchoredPosition.y);
         float width = ComputePerTabMax();
         if (_draggingTab == null && !Mathf.Approximately(width, _tabWidth)) ResizeTabs(width);
         if (_renamingPage != null) PositionRenameInput();
@@ -465,7 +457,7 @@ public class PageTabBar
     {
         var tabRt = (RectTransform)tab.transform;
         var menu = Dashboard.OpenChartPopupMenu(new Vector2(0f, -kTabHeight), tabRt);
-        menu.m_RectTrans.SetParent(Dashboard.chartContentRt);
+        // Keep the tab menu under the header so the native sidebar cannot cover it.
 
         var rename = menu.AddMenuButton(Loc.L("重命名", "Rename"));
         rename.onMenuButtonClick += _ => { Dashboard.CloseChartPopupMenu(); BeginRename(tab); };

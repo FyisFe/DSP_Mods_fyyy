@@ -6,7 +6,6 @@ All notable changes to DashboardOverhaul are documented here.
 ## [1.3.0] - 2026-09-22
 
 - 顶部页签改为独立顶栏，按窗口宽度调整，并提供更大的点击区域、悬停/焦点状态和完整页名提示。/ The top tabs now use a separate responsive header with larger hit areas, hover/focus states and full-name tooltips.
-- 侧栏开合时仅平移图表层；背景和网格保持原位，图表与侧栏菜单位于页签下方。/ Toggling the sidebar moves only the chart layer; the background and grid stay in place, with charts and sidebar menus below the tabs.
 - 新页追加到末尾；达到 9 页上限或仅剩一页时禁用相应操作并提示原因。/ New pages append at the end; actions disabled at the nine-page limit or on the last page explain why.
 - 删除含图表的页面时，确认框显示页名、图表数量，以及统计项仍保留在侧栏。/ Deleting a page with charts shows its name, chart count and retained sidebar statistics in the confirmation.
 - 图表菜单明确区分“移除此图表”和“删除统计项及其全部图表”；重命名与删除统计项时显示关联图表数量，并同步名称提示。/ The chart menu distinguishes removing one chart from deleting a statistic and all its charts; rename and delete show the affected count, and name tooltips update.

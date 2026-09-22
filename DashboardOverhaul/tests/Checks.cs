@@ -57,17 +57,6 @@ internal static class Checks
         float left = Constant("kBaseLeftMargin");
         Require(-Constant("kTopOffset") + tabHeight + 10 <= height,
             "header must clear the first chart's 10-pixel resize hit area");
-        var contentLeft = type.GetMethod("ContentLeft", flags);
-        foreach (float sidebarX in new[] { -380.00006f, -380f, -375f, -190f, -5f, 0f })
-        {
-            float chartLeft = (float)contentLeft.Invoke(null, new object[] { 380f, sidebarX });
-            float handleRight = 380f + sidebarX + 20f;
-            Require(chartLeft - 10f >= handleRight,
-                "chart resize hit areas must clear the native handle throughout the sidebar animation");
-            Require(Math.Abs(chartLeft - Math.Max(0, 380f + sidebarX) - Constant("kChartLeftMargin")) < 0.01f,
-                "sidebar animation must translate the chart origin by the visible sidebar width");
-        }
-
         var fit = type.GetMethod("ComputePerTabMax", flags, null, new[] { typeof(float), typeof(int) }, null);
         foreach (float screenWidth in new[] { 1280f, 1920f, 2560f, 3840f })
             foreach (float scale in new[] { 0.75f, 1f, 1.5f, 2f })
