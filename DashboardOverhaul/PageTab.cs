@@ -8,17 +8,21 @@ namespace DashboardOverhaul;
 /// opens the menu; dragging reorders -- all handled by PageTabBar. Unity only promotes a press to a
 /// drag past EventSystem.pixelDragThreshold, and a drag suppresses the click, so the click gestures
 /// are unaffected.</summary>
-public class PageTab : MonoBehaviour, IPointerClickHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
+public class PageTab : Button, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
     public int Slot;
     private PageTabBar _bar;
     public Text Label;
     public Image Background;
+    public string FullName;
 
     public void Setup(PageTabBar bar, int slot, string label, bool current)
     {
         _bar = bar;
         Slot = slot;
+        FullName = label;
+        targetGraphic = Background;
+        onClick.AddListener(() => _bar.SwitchTo(Slot));
         if (Label != null) Label.text = label;
         SetCurrent(current);
     }
@@ -27,18 +31,18 @@ public class PageTab : MonoBehaviour, IPointerClickHandler, IBeginDragHandler, I
     {
         if (Background == null) return;
         var c = _bar != null ? _bar.Dashboard.focusColor : Color.gray;
-        Background.color = current ? c : new Color(c.r, c.g, c.b, 0.15f);
+        DashboardUi.StyleButton(this, current ? c : new Color(c.r, c.g, c.b, 0.25f));
     }
 
-    public void OnPointerClick(PointerEventData eventData)
+    public override void OnPointerClick(PointerEventData eventData)
     {
         if (_bar == null) return;
         if (eventData.button == PointerEventData.InputButton.Right)
             _bar.OpenContextMenu(this);
-        else if (eventData.clickCount >= 2)
+        else if (eventData.button == PointerEventData.InputButton.Left && eventData.clickCount >= 2)
             _bar.BeginRename(this);
         else
-            _bar.SwitchTo(Slot);
+            base.OnPointerClick(eventData);
     }
 
     public void OnBeginDrag(PointerEventData eventData)

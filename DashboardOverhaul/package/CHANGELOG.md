@@ -3,6 +3,17 @@
 All notable changes to DashboardOverhaul are documented here.
 本文件记录 DashboardOverhaul 的版本变更。
 
+## [1.3.0] - 2026-09-22
+
+- 独立顶部标签栏适配窗口宽度，扩大点击区域，提供悬停/焦点状态和完整页名提示，避免与图表标题和侧栏菜单重叠 / A separate responsive tab bar with larger hit areas, hover/focus states and full-name tooltips stays clear of chart titles and sidebar menus
+- 保留原生侧栏开关，固定背景与网格，仅图表层平移避让，侧栏和面板之间不再露出游戏画面 / Preserve the native sidebar toggle; keep the background and grid stationary while charts pan clear of the handle, with no uncovered gap
+- 页签重命名输入框始终位于顶部可见区域，编辑背景遮住原页名 / Keep the page rename input inside the visible header and hide the original label while editing
+- 新页追加到末尾；达到页数上限或仅剩一页时禁用对应操作并说明原因 / Append new pages; explain disabled page-limit and last-page actions
+- 区分移除单图表和删除统计项，改名/删除显示影响范围，名称提示同步更新 / Distinguish chart removal from statistic deletion; show rename/delete scope and synchronize name tooltips
+- 跨页移动提供“前往”入口；无空位时保留原图表 / Move notices offer navigation; full destinations leave the original chart intact
+- 空白页提供添加图表、打开统计窗口及复制其他页布局的入口 / Empty-page actions add charts, open statistics or copy another page's layout
+- 统一名称编辑的提交/取消和焦点清理，修正删除当前页时的事件解绑顺序及无效页码恢复时机 / Consistent rename completion and focus cleanup; correct current-page deletion teardown and repair invalid page indices before opening
+
 ## [1.2.0] - 2026-06-22
 
 页面重新排序 / Page reordering.

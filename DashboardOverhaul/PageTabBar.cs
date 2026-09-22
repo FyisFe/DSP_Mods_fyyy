@@ -8,11 +8,14 @@ namespace DashboardOverhaul;
 public class PageTabBar
 {
     public UIDashboard Dashboard { get; private set; }
+    private RectTransform _content;
+    private RectTransform _header;
     private RectTransform _root;
+    private Vector2 _statboardTopOffset;
     private Font _font;
     private readonly List<PageTab> _tabs = new();
     private InputField _renameInput;
-    private int _renamingSlot = -1;
+    private DashboardPage _renamingPage;
     private RectTransform _addButton;
     private PageTab _draggingTab;
     private RectTransform _placeholder;
@@ -22,13 +25,26 @@ public class PageTabBar
     private HorizontalLayoutGroup _layout;                    // cached at Build; its spacing/padding are read every drag-move frame
     private readonly Vector3[] _dragCorners = new Vector3[4]; // reused per-move scratch (avoids per-frame Vector3[4] allocations)
     private readonly List<Transform> _reflowOrdered = new();  // reused per-move scratch for the sibling reorder
+    private float _tabWidth = -1f;
+    private RectTransform _emptyPanel;
+    private Text _emptyText;
+    private Button _emptyAdd;
+    private Button _emptyCopy;
+    private int _emptyState = -1;
+    private RectTransform _notice;
+    private Text _noticeText;
+    private DashboardPage _movedPage;
+    private ChartData _movedChart;
+    private float _noticeUntil;
 
-    private const int kTabHeight = 20;
+    private const int kTabHeight = 28;
     private const int kTabMinWidth = 64;
     private const float kTabMaxWidth = 160f;
     private const float kDragChipMaxWidth = 120f; // while dragging, the lifted tab shrinks to this cap so a long title doesn't cover the row
     private const float kTabHPadding = 20f; // sum of 10px left + 10px right text padding
-    private const float kBaseLeftMargin = 40f;
+    private const float kHeaderHeight = 44f;
+    private const float kChartLeftMargin = 32f; // Native handle is 20px wide; leave its hit area clear of chart resize handles.
+    private const float kBaseLeftMargin = 4f;
     private const float kTopOffset = -4f;
 
     public void Build(UIDashboard dashboard)
@@ -37,9 +53,46 @@ public class PageTabBar
         _font = dashboard.emptyTip != null ? dashboard.emptyTip.font : null;
         if (_font == null) DashboardOverhaulPlugin.Logger.LogWarning("[DashboardOverhaul] emptyTip/font is null; tab labels may be invisible.");
 
+        // Keep the background fixed; only the chart layer pans clear of the sidebar.
+        _content = (RectTransform)new GameObject("DO_Content", typeof(RectTransform)).transform;
+        _content.SetParent(dashboard.rectTrans, false);
+        _content.SetAsFirstSibling();
+        _content.anchorMin = Vector2.zero;
+        _content.anchorMax = Vector2.one;
+        _content.offsetMin = new Vector2(kChartLeftMargin, 0f);
+        _content.offsetMax = new Vector2(0f, -kHeaderHeight);
+
+        // Cover the fixed left margin under the native handle.
+        var panelColor = new Color(0.04f, 0.12f, 0.19f, 1f);
+        var gutter = (RectTransform)new GameObject("DO_SidebarGutter", typeof(RectTransform), typeof(Image)).transform;
+        gutter.SetParent(_content, false);
+        gutter.anchorMin = Vector2.zero;
+        gutter.anchorMax = new Vector2(0f, 1f);
+        gutter.pivot = new Vector2(1f, 0.5f);
+        gutter.anchoredPosition = Vector2.zero;
+        gutter.sizeDelta = new Vector2(kChartLeftMargin, 0f);
+        gutter.GetComponent<Image>().color = panelColor;
+
+        Reparent(dashboard.gridRawImage.rectTransform, _content);
+        Reparent(dashboard.chartContentRt, _content);
+        var statboard = (RectTransform)dashboard.statboard.transform;
+        _statboardTopOffset = statboard.offsetMax;
+        statboard.offsetMax = _statboardTopOffset - new Vector2(0f, kHeaderHeight);
+
+        _header = (RectTransform)new GameObject("DO_Header", typeof(RectTransform), typeof(Image)).transform;
+        _header.SetParent(dashboard.rectTrans, false);
+        _header.anchorMin = new Vector2(0f, 1f);
+        _header.anchorMax = Vector2.one;
+        _header.pivot = new Vector2(0f, 1f);
+        _header.sizeDelta = new Vector2(0f, kHeaderHeight);
+        _header.anchoredPosition = Vector2.zero;
+        // Cover off-screen charts without changing their saved grid positions; block click-through.
+        _header.GetComponent<Image>().color = panelColor;
+        dashboard.tipsParent.SetAsLastSibling();
+
         var go = new GameObject("DO_PageTabBar", typeof(RectTransform));
         _root = (RectTransform)go.transform;
-        _root.SetParent(dashboard.rectTrans, false);
+        _root.SetParent(_header, false);
         // top horizontal row, anchored top-left
         _root.anchorMin = new Vector2(0f, 1f);
         _root.anchorMax = new Vector2(0f, 1f);
@@ -56,14 +109,34 @@ public class PageTabBar
         layout.childControlHeight = true;
         var fitter = go.AddComponent<ContentSizeFitter>();
         fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+        BuildEmptyPanel();
+    }
+
+    private static void Reparent(RectTransform child, RectTransform parent)
+    {
+        var position = child.anchoredPosition;
+        child.SetParent(parent, false);
+        child.anchoredPosition = position;
     }
 
     public void Free()
     {
-        if (_root != null) Object.Destroy(_root.gameObject);
+        CancelRename();
+        if (_renameInput != null) Object.Destroy(_renameInput.gameObject);
+        if (_emptyPanel != null) Object.Destroy(_emptyPanel.gameObject);
+        if (_notice != null) Object.Destroy(_notice.gameObject);
+        if (_header != null) Object.Destroy(_header.gameObject);
+        if (_content != null)
+        {
+            Reparent(Dashboard.gridRawImage.rectTransform, Dashboard.rectTrans);
+            Reparent(Dashboard.chartContentRt, Dashboard.rectTrans);
+            Object.Destroy(_content.gameObject);
+        }
+        ((RectTransform)Dashboard.statboard.transform).offsetMax = _statboardTopOffset;
+        _content = null;
+        _header = null;
         _root = null;
         _renameInput = null;
-        _renamingSlot = -1;
         _addButton = null;
         _placeholder = null;
         _draggingTab = null;
@@ -72,16 +145,29 @@ public class PageTabBar
         Dashboard = null;
     }
 
-    /// <summary>Keep the tab bar clear of the sliding sidebar: offset its x by the
-    /// sidebar's currently-visible width so the tabs slide along with it.</summary>
+    private static float ContentLeft(float sidebarWidth, float sidebarX) =>
+        Mathf.Max(0f, sidebarWidth + sidebarX) + kChartLeftMargin;
+
+    /// <summary>Fit the header and keep charts clear of the native sidebar handle.</summary>
     public void UpdateLayout()
     {
         if (_root == null || Dashboard == null) return;
-        float offset = 0f;
         var sidebar = Dashboard.statboardTestRt;
-        if (sidebar != null)
-            offset = Mathf.Max(0f, sidebar.rect.width + sidebar.anchoredPosition.x);
-        _root.anchoredPosition = new Vector2(kBaseLeftMargin + offset, kTopOffset);
+        Dashboard.chartContentRt.anchoredPosition = new Vector2(
+            ContentLeft(sidebar.rect.width, sidebar.anchoredPosition.x) - kChartLeftMargin,
+            Dashboard.chartContentRt.anchoredPosition.y);
+        float width = ComputePerTabMax();
+        if (_draggingTab == null && !Mathf.Approximately(width, _tabWidth)) ResizeTabs(width);
+        if (_renamingPage != null) PositionRenameInput();
+        UpdateEmptyPanel();
+        if (_notice != null && _notice.gameObject.activeSelf)
+        {
+            int slot = System.Array.IndexOf(Dashboard.charts.dashboardLayout.pages, _movedPage);
+            if (Time.unscaledTime >= _noticeUntil || slot < 1 || !_movedPage.chartDatas.Contains(_movedChart))
+                _notice.gameObject.SetActive(false);
+            else
+                _noticeText.text = Loc.L("已移动到：", "Moved to: ") + PageOps.PageName(_movedPage, slot);
+        }
     }
 
     public void Refresh()
@@ -89,7 +175,12 @@ public class PageTabBar
         if (_root == null || Dashboard == null) return;
         CleanupDrag(); // a rebuild cancels any in-progress drag; the lifted tab + placeholder are destroyed in the sweep below
         for (int c = _root.childCount - 1; c >= 0; c--)
-            Object.Destroy(_root.GetChild(c).gameObject);
+        {
+            var child = _root.GetChild(c);
+            child.gameObject.SetActive(false);
+            child.SetParent(null, false); // Destroy is deferred; exclude old tabs from this frame's layout.
+            Object.Destroy(child.gameObject);
+        }
         _tabs.Clear();
 
         var charts = Dashboard.charts;
@@ -100,10 +191,12 @@ public class PageTabBar
         for (int i = 1; i < DashboardLayout.MAX_PAGE_COUNT; i++)
         {
             if (pages[i] == null) continue;
-            string label = string.IsNullOrEmpty(pages[i].name) ? i.ToString() : pages[i].name;
+            string label = PageOps.PageName(pages[i], i);
             _tabs.Add(CreateTab(i, label, i == current, tabMax));
         }
         CreateAddButton();
+        ResizeTabs(tabMax);
+        UpdateLayout();
     }
 
     private PageTab CreateTab(int slot, string label, bool current, float maxWidth)
@@ -130,6 +223,7 @@ public class PageTabBar
         text.alignment = TextAnchor.MiddleCenter;
         text.color = Color.white;
         text.raycastTarget = false;
+        text.supportRichText = false;
         // in the slim bar the font line height can exceed the text box -> default clipping blanks it; Overflow keeps it always rendered
         text.horizontalOverflow = HorizontalWrapMode.Overflow;
         text.verticalOverflow = VerticalWrapMode.Overflow;
@@ -138,14 +232,13 @@ public class PageTabBar
         tab.Label = text;
         tab.Background = bg;
         tab.Setup(this, slot, label, current);
+        DashboardUi.Tip(go, label, Loc.L("单击切换 · 双击重命名 · 右键管理 · 拖动排序",
+            "Click to switch · Double-click to rename · Right-click to manage · Drag to reorder"));
         FitTabWidth(text, le, label, maxWidth);
         return tab;
     }
 
-    /// <summary>Size the tab to its label width (clamped to [min,<paramref name="maxWidth"/>]); ellipsize
-    /// the text past the cap so a long page name can't overflow onto the neighbouring tabs. Vertical
-    /// Overflow is kept (it's what stops the slim bar from blanking the text); only horizontal spill
-    /// is bounded. The cap is per-Refresh and shrinks with page count (see ComputePerTabMax).</summary>
+    /// <summary>Fit the label to the available width; keep vertical overflow for the game font's line height.</summary>
     private static void FitTabWidth(Text text, LayoutElement le, string label, float maxWidth)
     {
         float maxText = maxWidth - kTabHPadding;
@@ -160,24 +253,36 @@ public class PageTabBar
                 if (text.preferredWidth <= maxText) break;
             }
         }
-        le.preferredWidth = Mathf.Clamp(text.preferredWidth + kTabHPadding, kTabMinWidth, maxWidth);
+        le.minWidth = Mathf.Min(kTabMinWidth, maxWidth);
+        le.preferredWidth = Mathf.Clamp(text.preferredWidth + kTabHPadding, le.minWidth, maxWidth);
     }
 
-    /// <summary>Per-tab width cap = (available width) / MAX_PAGE_COUNT. There are at most 9 page
-    /// tabs, so the spare 1/10 share absorbs the + button and margins and the row always fits; on
-    /// wide screens this is far larger than a fixed cap, so long names use the space instead of
-    /// leaving the bar half-empty. Reads the live dashboard rect and the sidebar offset, so it
-    /// adapts to resolution / aspect; falls back to a sane default if the width isn't laid out yet.</summary>
+    /// <summary>Share the live viewport between active tabs, reserving the add button and gaps.</summary>
     private float ComputePerTabMax()
     {
         if (Dashboard == null || Dashboard.rectTrans == null) return kTabMaxWidth;
-        float dashW = Dashboard.rectTrans.rect.width;
-        if (dashW <= 1f) return kTabMaxWidth; // not laid out yet; next Refresh corrects it
-        float sidebar = 0f;
-        var sb = Dashboard.statboardTestRt;
-        if (sb != null) sidebar = Mathf.Max(0f, sb.rect.width + sb.anchoredPosition.x);
-        float per = (dashW - sidebar) / DashboardLayout.MAX_PAGE_COUNT;
-        return Mathf.Max(kTabMinWidth, per);
+        int count = Dashboard.charts == null ? 1 : Mathf.Max(1, PageOps.ActivePageCount(Dashboard.charts));
+        return ComputePerTabMax(Dashboard.rectTrans.rect.width, count);
+    }
+
+    private static float ComputePerTabMax(float dashW, int count)
+    {
+        if (dashW <= 1f) return kTabMaxWidth; // not laid out yet
+        float available = dashW - kBaseLeftMargin - 16f - kTabHeight - count * 4f;
+        return Mathf.Clamp(available / count, 32f, 240f);
+    }
+
+    private void ResizeTabs(float width)
+    {
+        _tabWidth = width;
+        foreach (var tab in _tabs)
+        {
+            tab.FullName = PageOps.PageName(Dashboard.charts.dashboardLayout.pages[tab.Slot], tab.Slot);
+            FitTabWidth(tab.Label, tab.GetComponent<LayoutElement>(), tab.FullName, width);
+            DashboardUi.Tip(tab.gameObject, tab.FullName,
+                Loc.L("单击切换 · 双击重命名 · 右键管理 · 拖动排序",
+                    "Click to switch · Double-click to rename · Right-click to manage · Drag to reorder"));
+        }
     }
 
     public void SwitchTo(int slot)
@@ -198,6 +303,8 @@ public class PageTabBar
     public void AddNewPage()
     {
         if (Dashboard == null) return;
+        FinishRename();
+        Dashboard.CloseChartPopupMenu();
         int slot = PageOps.AddPage(Dashboard.charts);
         if (slot < 0)
         {
@@ -229,6 +336,12 @@ public class PageTabBar
 
         var btn = go.AddComponent<Button>();
         btn.targetGraphic = bg;
+        DashboardUi.StyleButton(btn, bg.color);
+        bg.color = Color.white;
+        btn.interactable = PageOps.ActivePageCount(Dashboard.charts) < DashboardLayout.MAX_PAGE_COUNT - 1;
+        DashboardUi.Tip(go, Loc.L("新建页面", "New page"), btn.interactable
+            ? Loc.L("在末尾添加一个空白页面", "Append an empty page")
+            : Loc.L("已达 9 页上限", "Maximum of 9 pages reached"));
         btn.onClick.AddListener(AddNewPage);
     }
 
@@ -251,10 +364,10 @@ public class PageTabBar
         var go = new GameObject("DO_RenameInput", typeof(RectTransform));
         var rt = (RectTransform)go.transform;
         rt.SetParent(_root.parent, false); // parent to the tab bar's parent, floating above the tabs
-        rt.sizeDelta = new Vector2(120f, kTabHeight);
+        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
 
         var bg = go.AddComponent<Image>();
-        bg.color = new Color(0f, 0f, 0f, 0.85f);
+        bg.color = Color.black;
 
         var textGo = new GameObject("Text", typeof(RectTransform));
         var trt = (RectTransform)textGo.transform;
@@ -279,28 +392,73 @@ public class PageTabBar
     public void BeginRename(PageTab tab)
     {
         if (_root == null || Dashboard == null || Dashboard.charts == null) return;
+        FinishRename();
+        ChartRename.Cancel();
         var input = EnsureRenameInput();
-        _renamingSlot = tab.Slot;
         var page = Dashboard.charts.dashboardLayout.pages[tab.Slot];
+        _renamingPage = page;
         input.gameObject.SetActive(true);
-        // position over the tab being renamed
-        var inputRt = (RectTransform)input.transform;
-        var tabRt = (RectTransform)tab.transform;
-        inputRt.position = tabRt.position;
-        inputRt.sizeDelta = new Vector2(Mathf.Max(120f, tabRt.rect.width), kTabHeight);
+        PositionRenameInput();
         input.text = page != null ? (page.name ?? string.Empty) : string.Empty;
         input.Select();
         input.ActivateInputField();
+        input.transform.SetAsLastSibling();
+    }
+
+    private static Rect RenameInputRect(Rect tab, Rect header)
+    {
+        float width = Mathf.Min(Mathf.Max(120f, tab.width), header.width - 8f);
+        float x = Mathf.Clamp(tab.xMin, header.xMin + 4f, header.xMax - width - 4f);
+        float y = Mathf.Clamp(tab.yMax - kTabHeight, header.yMin + 4f, header.yMax - kTabHeight - 4f);
+        return new Rect(x, y, width, kTabHeight);
+    }
+
+    private void PositionRenameInput()
+    {
+        foreach (var tab in _tabs)
+            if (Dashboard.charts.dashboardLayout.pages[tab.Slot] == _renamingPage)
+            {
+                var inputRt = (RectTransform)_renameInput.transform;
+                var tabRt = (RectTransform)tab.transform;
+                tabRt.GetWorldCorners(_dragCorners);
+                Vector2 bottomLeft = _header.InverseTransformPoint(_dragCorners[0]);
+                Vector2 topRight = _header.InverseTransformPoint(_dragCorners[2]);
+                var rect = RenameInputRect(Rect.MinMaxRect(bottomLeft.x, bottomLeft.y, topRight.x, topRight.y), _header.rect);
+                inputRt.sizeDelta = rect.size;
+                inputRt.anchoredPosition = new Vector2(rect.xMin - _header.rect.xMin, rect.yMax - _header.rect.yMax);
+                return;
+            }
     }
 
     private void CommitRename(string value)
     {
-        if (_renamingSlot < 0 || Dashboard == null || Dashboard.charts == null) { _renamingSlot = -1; return; }
-        var page = Dashboard.charts.dashboardLayout.pages[_renamingSlot];
+        var page = _renamingPage;
+        bool canceled = _renameInput != null && _renameInput.wasCanceled;
+        CancelRename();
+        if (page == null || canceled || Dashboard?.charts == null) return;
+        if (System.Array.IndexOf(Dashboard.charts.dashboardLayout.pages, page) < 1) return;
         PageOps.RenamePage(page, value);
-        _renamingSlot = -1;
-        if (_renameInput != null) _renameInput.gameObject.SetActive(false);
-        Refresh();
+        ResizeTabs(ComputePerTabMax()); // Keep the clicked tab alive when editing loses focus.
+    }
+
+    public void FinishRename()
+    {
+        if (_renamingPage != null) _renameInput.DeactivateInputField();
+    }
+
+    public void CancelRename()
+    {
+        _renamingPage = null;
+        DashboardUi.HideInput(_renameInput);
+    }
+
+    public void Close()
+    {
+        CancelRename();
+        ChartRename.Cancel();
+        if (_notice != null) _notice.gameObject.SetActive(false);
+        _movedPage = null;
+        _movedChart = null;
     }
 
     public void OpenContextMenu(PageTab tab)
@@ -313,11 +471,15 @@ public class PageTabBar
         rename.onMenuButtonClick += _ => { Dashboard.CloseChartPopupMenu(); BeginRename(tab); };
         rename.SetState(true);
 
-        var del = menu.AddMenuButton(Loc.L("删除", "Delete"));
+        bool canDelete = PageOps.CanDelete(Dashboard.charts);
+        var del = menu.AddMenuButton(canDelete ? Loc.L("删除页面", "Delete page")
+            : Loc.L("删除页面（至少保留一页）", "Delete page (keep at least one)"));
         del.onMenuButtonClick += _ => { Dashboard.CloseChartPopupMenu(); DeletePage(tab); };
         del.SetState(true);
+        del.m_Button.interactable = canDelete;
 
         menu.SetState(true);
+        Dashboard.input_lock = true;
     }
 
     public void DeletePage(PageTab tab)
@@ -333,23 +495,29 @@ public class PageTabBar
         bool hasCharts = page != null && page.chartDatas != null && page.chartDatas.Count > 0;
         if (hasCharts)
             UIMessageBox.Show(Loc.L("删除页面", "Delete page"),
-                Loc.L("确认删除该页及其图表？", "Delete this page and its charts?"),
+                string.Format(Loc.L("删除页面“{0}”及其中 {1} 个图表？统计项仍保留在侧栏。",
+                    "Delete page “{0}” and its {1} charts? Statistics remain in the sidebar."),
+                    PageOps.PageName(page, slot), page.chartDatas.Count),
                 Loc.L("取消", "Cancel"), Loc.L("确定", "OK"), 1,
-                (UIMessageBox.Response)null, new UIMessageBox.Response(() => DoDeletePage(slot)));
+                (UIMessageBox.Response)null, new UIMessageBox.Response(() => DoDeletePage(charts, page)));
         else
-            DoDeletePage(slot);
+            DoDeletePage(charts, page);
     }
 
-    private void DoDeletePage(int slot)
+    private void DoDeletePage(CustomCharts charts, DashboardPage page)
     {
-        if (Dashboard == null || Dashboard.charts == null) return; // dialog callback may fire after teardown
-        var charts = Dashboard.charts;
+        if (Dashboard == null || Dashboard.charts != charts) return;
+        int slot = System.Array.IndexOf(charts.dashboardLayout.pages, page);
+        if (page == null || slot < 1) return;
+        if (!PageOps.CanDelete(charts)) return;
+        CancelRename();
+        ChartRename.Cancel();
         int target = PageOps.PickPageAfterDelete(charts.dashboardLayout, slot);
         bool deletingCurrent = charts.currentView.pageIndex == slot;
-        if (!PageOps.RemovePage(charts, slot)) return;
-        if (_renamingSlot == slot) { _renamingSlot = -1; if (_renameInput != null) _renameInput.gameObject.SetActive(false); }
+        // UI listeners need the original statPlanId while being unregistered.
         if (deletingCurrent && target > 0)
             Dashboard.SetViewPage(target);
+        if (!PageOps.RemovePage(charts, slot)) return;
         Refresh();
     }
 
@@ -363,11 +531,7 @@ public class PageTabBar
         if (_tabs.Count < 2) return;      // nothing to reorder
 
         // A drag invalidates any in-progress rename (its slot is about to be reassigned).
-        if (_renamingSlot >= 0)
-        {
-            _renamingSlot = -1;
-            if (_renameInput != null) _renameInput.gameObject.SetActive(false);
-        }
+        CancelRename();
 
         _draggingTab = tab;
         _dragInsertIndex = -1; // force the first reflow frame to apply
@@ -387,7 +551,7 @@ public class PageTabBar
         float width;
         if (tab.Label != null && le != null)
         {
-            FitTabWidth(tab.Label, le, tab.Label.text, kDragChipMaxWidth);
+            FitTabWidth(tab.Label, le, tab.FullName, Mathf.Min(_tabWidth, kDragChipMaxWidth));
             width = le.preferredWidth;
         }
         else
@@ -420,7 +584,8 @@ public class PageTabBar
 
         var rt = (RectTransform)tab.transform;
         _root.GetWorldCorners(_dragCorners);
-        float x = Mathf.Clamp(world.x, _dragCorners[0].x, _dragCorners[2].x);
+        float halfWidth = rt.rect.width * _root.lossyScale.x * 0.5f;
+        float x = Mathf.Clamp(world.x, _dragCorners[0].x + halfWidth, _dragCorners[2].x - halfWidth);
         rt.position = new Vector3(x, _dragFixedY, _dragZ);
 
         ReflowPlaceholder(x);
@@ -519,5 +684,133 @@ public class PageTabBar
         _placeholder = null;   // destroyed by Refresh's child sweep
         _draggingTab = null;
         _dragInsertIndex = -1;
+    }
+
+    private Button CreateAction(Transform parent, string label, float x, float width, UnityEngine.Events.UnityAction action)
+    {
+        var go = new GameObject("DO_Action", typeof(RectTransform));
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(parent, false);
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0f);
+        rt.pivot = new Vector2(0.5f, 0f);
+        rt.anchoredPosition = new Vector2(x, 0f);
+        rt.sizeDelta = new Vector2(width, 30f);
+        var bg = go.AddComponent<Image>();
+        var button = go.AddComponent<Button>();
+        button.targetGraphic = bg;
+        DashboardUi.StyleButton(button, new Color(0.13f, 0.3f, 0.4f, 0.95f));
+        DashboardUi.Text(rt, _font, label);
+        button.onClick.AddListener(action);
+        return button;
+    }
+
+    private void BuildEmptyPanel()
+    {
+        var go = new GameObject("DO_EmptyPage", typeof(RectTransform));
+        _emptyPanel = (RectTransform)go.transform;
+        _emptyPanel.SetParent(Dashboard.chartContentRt, false);
+        _emptyPanel.sizeDelta = new Vector2(460f, 112f);
+        _emptyText = DashboardUi.Text(_emptyPanel, _font, "", TextAnchor.UpperCenter);
+        _emptyAdd = CreateAction(_emptyPanel, Loc.L("添加图表", "Add charts"), -100f, 184f, () =>
+        {
+            if (Dashboard.charts.statPlans.count == 0)
+            {
+                UIRoot.instance.uiGame.OpenProductionWindow();
+                UIRealtimeTip.Popup(Loc.L("在统计窗口中选择需要监控的统计项", "Choose a statistic to monitor in the statistics window"));
+            }
+            else if (!Dashboard.showSidebar) Dashboard.OnSidebarBtnClick(0);
+        });
+        _emptyCopy = CreateAction(_emptyPanel, Loc.L("复制其他页面", "Copy another page"), 100f, 184f, OpenCopyMenu);
+        go.SetActive(false);
+    }
+
+    private void UpdateEmptyPanel()
+    {
+        if (_emptyPanel == null || !PageOps.IsValidViewPage(Dashboard.charts)) return;
+        var charts = Dashboard.charts;
+        var current = charts.dashboardLayout.pages[charts.currentView.pageIndex];
+        Dashboard.emptyTip.gameObject.SetActive(false);
+        bool empty = current.chartDatas.Count == 0;
+        if (_emptyPanel.gameObject.activeSelf != empty) _emptyPanel.gameObject.SetActive(empty);
+        if (!empty) return;
+        bool hasStats = charts.statPlans.count > 0;
+        bool canCopy = false;
+        foreach (var page in charts.dashboardLayout.pages)
+            if (page != null && page != current && page.chartDatas.Count > 0) { canCopy = true; break; }
+        int state = (hasStats ? 1 : 0) | (canCopy ? 2 : 0) | (Localization.isZHCN ? 4 : 0);
+        if (state == _emptyState) return;
+        _emptyState = state;
+        _emptyText.text = Loc.L("当前页暂无图表\n", "This page has no charts\n") + (hasStats
+            ? Loc.L("打开侧栏，点击统计项旁的添加按钮。", "Open the sidebar and use a statistic's add button.")
+            : Loc.L("先在统计窗口中添加需要监控的统计项。", "Start by adding a statistic from the statistics window."));
+        _emptyAdd.GetComponentInChildren<Text>().text = hasStats ? Loc.L("添加图表", "Add charts")
+            : Loc.L("打开统计窗口", "Open statistics");
+        _emptyCopy.interactable = canCopy;
+        DashboardUi.Tip(_emptyCopy.gameObject, Loc.L("复制其他页面", "Copy another page"), canCopy
+            ? Loc.L("复制布局和显示设置；统计项与原页面共享，重命名会同步生效。",
+                "Copy layout and display settings. Statistics are shared; renaming affects both pages.")
+            : Loc.L("没有其他包含图表的页面", "No other page contains charts"));
+    }
+
+    private void OpenCopyMenu()
+    {
+        var charts = Dashboard.charts;
+        var target = charts.dashboardLayout.pages[charts.currentView.pageIndex];
+        var menu = Dashboard.OpenChartPopupMenu(new Vector2(0f, 30f), (RectTransform)_emptyCopy.transform);
+        menu.m_RectTrans.SetParent(Dashboard.chartContentRt, true);
+        for (int i = 1; i < DashboardLayout.MAX_PAGE_COUNT; i++)
+        {
+            var source = charts.dashboardLayout.pages[i];
+            if (source == null || source == target || source.chartDatas.Count == 0) continue;
+            var item = menu.AddMenuButton($"{PageOps.PageName(source, i)} ({source.chartDatas.Count})");
+            item.onMenuButtonClick += _ =>
+            {
+                if (Dashboard == null || Dashboard.charts != charts ||
+                    System.Array.IndexOf(charts.dashboardLayout.pages, target) < 1) return;
+                Dashboard.CloseChartPopupMenu();
+                if (!PageOps.CopyIntoEmptyPage(source, target)) return;
+                Dashboard.DetermineCharts();
+                UpdateEmptyPanel();
+                UIRealtimeTip.Popup(Loc.L("已复制图表，统计项与原页共享。", "Charts copied. Statistics are shared with the source page."));
+            };
+            item.SetState(true);
+        }
+        menu.SetState(true);
+        Dashboard.input_lock = true;
+    }
+
+    public void ShowMoved(DashboardPage page, ChartData chart)
+    {
+        if (_notice == null)
+        {
+            var go = new GameObject("DO_MoveNotice", typeof(RectTransform));
+            _notice = (RectTransform)go.transform;
+            _notice.SetParent(Dashboard.rectTrans, false);
+            _notice.anchorMin = _notice.anchorMax = new Vector2(0.5f, 0f);
+            _notice.pivot = new Vector2(0.5f, 0f);
+            _notice.anchoredPosition = new Vector2(0f, 36f);
+            _notice.sizeDelta = new Vector2(440f, 96f);
+            go.AddComponent<Image>().color = new Color(0.02f, 0.08f, 0.14f, 0.96f);
+            _noticeText = DashboardUi.Text(_notice, _font, "", TextAnchor.UpperCenter);
+            _noticeText.rectTransform.offsetMin = new Vector2(8f, 36f);
+            _noticeText.rectTransform.offsetMax = new Vector2(-8f, -8f);
+            CreateAction(_notice, Loc.L("前往", "Go to page"), -50f, 90f, () =>
+            {
+                int slot = System.Array.IndexOf(Dashboard.charts.dashboardLayout.pages, _movedPage);
+                if (slot > 0)
+                {
+                    SwitchTo(slot);
+                    Dashboard.HighlightChart(_movedChart);
+                }
+                _notice.gameObject.SetActive(false);
+            });
+            CreateAction(_notice, Loc.L("关闭", "Dismiss"), 50f, 90f, () => _notice.gameObject.SetActive(false));
+        }
+        _movedPage = page;
+        _movedChart = chart;
+        _noticeUntil = Time.unscaledTime + 10f;
+        _notice.gameObject.SetActive(true);
+        _notice.SetAsLastSibling();
+        UpdateLayout();
     }
 }

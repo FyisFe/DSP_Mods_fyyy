@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace DashboardOverhaul;
 
@@ -44,16 +45,34 @@ public static class PageOps
         return cur >= 1 && cur < DashboardLayout.MAX_PAGE_COUNT && pages[cur] != null;
     }
 
-    /// <summary>Claims the lowest free slot and initializes a page; returns the new slot, or -1 if full.</summary>
+    public static string PageName(DashboardPage page, int slot) =>
+        string.IsNullOrEmpty(page.name) ? slot.ToString() : page.name;
+
+    public static void EnsureViewPage(CustomCharts charts)
+    {
+        if (IsValidViewPage(charts)) return;
+        int slot = FirstActiveSlot(charts.dashboardLayout);
+        if (slot < 0)
+        {
+            slot = 1;
+            charts.dashboardLayout.AddPage(slot);
+        }
+        charts.currentView.pageIndex = slot;
+    }
+
+    /// <summary>Append after existing pages, preserving their order and the viewed page.</summary>
     public static int AddPage(CustomCharts charts)
     {
         var layout = charts.dashboardLayout;
         int slot = FirstFreeSlot(layout);
         if (slot < 0) return -1;
-        // vanilla AddPage sets name = slot.ToString(); DashboardLayoutPatch.AddPage_Postfix blanks that
-        // auto-name so the tab shows the page's LIVE slot index (which stays correct after a reorder).
+        var order = new List<DashboardPage>();
+        for (int i = 1; i < DashboardLayout.MAX_PAGE_COUNT; i++)
+            if (layout.pages[i] != null) order.Add(layout.pages[i]);
         layout.AddPage(slot);
-        return slot;
+        order.Add(layout.pages[slot]);
+        ReorderPages(charts, order);
+        return order.Count;
     }
 
     public static bool CanDelete(CustomCharts charts) => ActivePageCount(charts) > 1;
@@ -72,6 +91,7 @@ public static class PageOps
     /// <summary>Frees all charts on the page and nulls the slot. Does not switch pages (caller handles currentView and refresh).</summary>
     public static bool RemovePage(CustomCharts charts, int index)
     {
+        if (!CanDelete(charts)) return false;
         if (index < 1 || index >= DashboardLayout.MAX_PAGE_COUNT) return false;
         var pages = charts.dashboardLayout.pages;
         var page = pages[index];
@@ -138,5 +158,70 @@ public static class PageOps
     {
         if (page == null) return;
         page.name = (newName ?? string.Empty).Trim();
+    }
+
+    public static int ChartCount(CustomCharts charts, int statPlanId)
+    {
+        int count = 0;
+        foreach (var page in charts.dashboardLayout.pages)
+            if (page != null)
+                foreach (var chart in page.chartDatas)
+                    if (chart.statPlanId == statPlanId) count++;
+        if (charts.watchLayout?.chartDatas != null)
+            foreach (var chart in charts.watchLayout.chartDatas)
+                if (chart.statPlanId == statPlanId) count++;
+        return count;
+    }
+
+    // Find space before mutating either page: a full destination must leave the source intact.
+    public static bool TryMoveChart(DashboardPage source, DashboardPage target, ChartData chart, Vector2Int bounds)
+    {
+        if (source == target || !source.chartDatas.Contains(chart)) return false;
+        Vector2Int pos = chart.pos;
+        if (!Fits(target, pos, chart.size, bounds))
+        {
+            bool found = false;
+            for (int y = 0; y + chart.size.y <= bounds.y && !found; y++)
+                for (int x = 0; x + chart.size.x <= bounds.x; x++)
+                    if (Fits(target, new Vector2Int(x, y), chart.size, bounds))
+                    {
+                        pos = new Vector2Int(x, y);
+                        found = true;
+                        break;
+                    }
+            if (!found) return false;
+        }
+        int depth = -1;
+        foreach (var other in target.chartDatas) depth = System.Math.Max(depth, other.depth);
+        source.chartDatas.Remove(chart);
+        chart.pos = pos;
+        chart.depth = depth + 1;
+        target.chartDatas.Add(chart);
+        return true;
+    }
+
+    private static bool Fits(DashboardPage page, Vector2Int pos, Vector2Int size, Vector2Int bounds)
+    {
+        if (pos.x < 0 || pos.y < 0 || pos.x + size.x > bounds.x || pos.y + size.y > bounds.y) return false;
+        foreach (var other in page.chartDatas)
+            if (pos.x + size.x > other.pos.x && other.pos.x + other.size.x > pos.x &&
+                pos.y + size.y > other.pos.y && other.pos.y + other.size.y > pos.y) return false;
+        return true;
+    }
+
+    public static bool CopyIntoEmptyPage(DashboardPage source, DashboardPage target)
+    {
+        if (source == target || target.chartDatas.Count != 0 || source.chartDatas.Count == 0) return false;
+        foreach (var chart in source.chartDatas)
+            target.chartDatas.Add(new ChartData
+            {
+                pos = chart.pos, size = chart.size, depth = chart.depth,
+                statPlanId = chart.statPlanId, presetIndex = chart.presetIndex,
+                genericStyleIndex = chart.genericStyleIndex,
+                backgroundStyleIndex = chart.backgroundStyleIndex,
+                borderStyleIndex = chart.borderStyleIndex,
+                displayTypeParams = (int[])chart.displayTypeParams.Clone()
+            });
+        return true;
     }
 }
