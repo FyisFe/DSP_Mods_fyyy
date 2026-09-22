@@ -5,14 +5,14 @@ All notable changes to DashboardOverhaul are documented here.
 
 ## [1.3.0] - 2026-09-22
 
-- 独立顶部标签栏适配窗口宽度，扩大点击区域，提供悬停/焦点状态和完整页名提示，避免与图表标题和侧栏菜单重叠 / A separate responsive tab bar with larger hit areas, hover/focus states and full-name tooltips stays clear of chart titles and sidebar menus
-- 保留原生侧栏开关，固定背景与网格，仅图表层平移避让，侧栏和面板之间不再露出游戏画面 / Preserve the native sidebar toggle; keep the background and grid stationary while charts pan clear of the handle, with no uncovered gap
-- 页签重命名输入框始终位于顶部可见区域，编辑背景遮住原页名 / Keep the page rename input inside the visible header and hide the original label while editing
-- 新页追加到末尾；达到页数上限或仅剩一页时禁用对应操作并说明原因 / Append new pages; explain disabled page-limit and last-page actions
-- 区分移除单图表和删除统计项，改名/删除显示影响范围，名称提示同步更新 / Distinguish chart removal from statistic deletion; show rename/delete scope and synchronize name tooltips
-- 跨页移动提供“前往”入口；无空位时保留原图表 / Move notices offer navigation; full destinations leave the original chart intact
-- 空白页提供添加图表、打开统计窗口及复制其他页布局的入口 / Empty-page actions add charts, open statistics or copy another page's layout
-- 统一名称编辑的提交/取消和焦点清理，修正删除当前页时的事件解绑顺序及无效页码恢复时机 / Consistent rename completion and focus cleanup; correct current-page deletion teardown and repair invalid page indices before opening
+- 顶部页签改为独立顶栏，按窗口宽度调整，并提供更大的点击区域、悬停/焦点状态和完整页名提示。/ The top tabs now use a separate responsive header with larger hit areas, hover/focus states and full-name tooltips.
+- 侧栏开合时仅平移图表层；背景和网格保持原位，图表与侧栏菜单位于页签下方。/ Toggling the sidebar moves only the chart layer; the background and grid stay in place, with charts and sidebar menus below the tabs.
+- 新页追加到末尾；达到 9 页上限或仅剩一页时禁用相应操作并提示原因。/ New pages append at the end; actions disabled at the nine-page limit or on the last page explain why.
+- 删除含图表的页面时，确认框显示页名、图表数量，以及统计项仍保留在侧栏。/ Deleting a page with charts shows its name, chart count and retained sidebar statistics in the confirmation.
+- 图表菜单明确区分“移除此图表”和“删除统计项及其全部图表”；重命名与删除统计项时显示关联图表数量，并同步名称提示。/ The chart menu distinguishes removing one chart from deleting a statistic and all its charts; rename and delete show the affected count, and name tooltips update.
+- 移动图表后可前往目标页并高亮图表；目标页无空位时原图表保持不变。/ After moving a chart, the notice can open its destination and highlight it; a full destination leaves the original chart unchanged.
+- 空白页可打开统计窗口、通过侧栏添加图表，或复制其他页面的布局和显示设置。/ Empty pages can open statistics, add charts through the sidebar or copy another page's layout and display settings.
+- 页签和统计项名称编辑支持 Esc 取消，失焦或切页提交；编辑目标被回收时取消未提交内容。/ Page and statistic rename inputs support Esc to cancel and focus loss or page switching to commit; recycling the target cancels pending edits.
 
 ## [1.2.0] - 2026-06-22
 
