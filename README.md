@@ -12,7 +12,7 @@ Independent mods for Dyson Sphere Program by FyisFe.
 | [BuildingPosViewer](BuildingPosViewer/) | 查看并复制建筑的 x、y、z 坐标 |
 | [DashboardOverhaul](DashboardOverhaul/package/README.md) | 改善仪表盘的分页、图表整理和操作体验 |
 | [FastTinderLaunch](FastTinderLaunch/) | 恢复旧版 100% 黑雾火种发射概率，可在 UXAssist 中开关 |
-| [FullPhotonReceiver](FullPhotonReceiver/) | 让光子模式的射线接收站始终满功率生产 |
+| [FullPhotonReceiver](FullPhotonReceiver/) | 让光子与发电模式的射线接收站始终满功率运行 |
 | [IcarusModelReplacement](IcarusModelReplacement/README.md) | 替换伊卡洛斯外观，内置咕嘎，也可加载自定义模型 |
 | [InterstellarLogisticsOpt](InterstellarLogisticsOpt/package/README.md) | 错开星际物流调度，减轻集中计算造成的卡顿 |
 | [LoadMemProfiler](LoadMemProfiler/README.md) | 记录读档和运行时的内存变化，供排查问题使用 |
