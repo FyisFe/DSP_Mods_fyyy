@@ -9,7 +9,7 @@ namespace InterstellarLogisticsOpt;
 [HarmonyPatch(typeof(StationComponent), nameof(StationComponent.DetermineDispatch))]
 internal static class DispatchOptimization
 {
-    internal static readonly bool SupportedGame = typeof(StationComponent).Module.ModuleVersionId == new Guid("ece4a40e-5e73-43f4-a9f8-4e74970b5942");
+    internal static readonly bool SupportedGame = typeof(StationComponent).Module.ModuleVersionId == new Guid("9d8957ec-44bb-4b81-9e0b-0ec4de39ccfa");
     internal static volatile bool Enabled;
     internal static string Failure;
 

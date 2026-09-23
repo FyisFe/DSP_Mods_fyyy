@@ -1,5 +1,17 @@
 # Changelog / 更新日志
 
+## 1.2.1
+
+### 中文
+
+- 适配游戏 0.10.35.29057，恢复派船计算优化和相位分散调度。
+- 将 UXAssist 最低依赖更新为 1.6.0，同时在插件加载时检查版本。
+
+### English
+
+- Support game 0.10.35.29057, restoring dispatch optimization and staggered scheduling.
+- Require UXAssist 1.6.0 or later in both the package manifest and plugin loader.
+
 ## 1.2.0
 
 ### 中文
