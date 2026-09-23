@@ -7,7 +7,7 @@ Ray receivers in both photon mode (`productId > 0`) and power mode (`productId =
 - Photon mode produces photons and supplies no grid energy.
 - Power mode provides full generating capacity; actual generation follows native grid demand.
 - Warmup, lens consumption, photon buffers and belt I/O remain native. Warmup rises at `1f / 72000f` per tick, reaching its maximum after roughly 20 minutes from cold.
-- Other generator types are unaffected. There are no configuration options.
+- Other generator types are unaffected.
 
 ## Runtime flow
 
@@ -37,7 +37,7 @@ Both prefixes use `ref PowerGeneratorComponent __instance` because the receiver 
 - BepInEx 5, Harmony, `net472`; GUID `org.fyyy.fullphotonreceiver`.
 - Compile reference: `../../DSP_Mods/AssemblyFromGame/Assembly-CSharp.dll`.
 - `FullPhotonReceiverPlugin.cs` owns the entry point and both patches.
-- Release builds produce a ZIP containing the plugin DLL, manifest, icon and [package README](../../../FullPhotonReceiver/package/README.md).
+- Release builds produce a ZIP containing the plugin DLL, manifest, icon, [README](../../../FullPhotonReceiver/package/README.md) and [changelog](../../../FullPhotonReceiver/package/CHANGELOG.md).
 
 ## Verification
 

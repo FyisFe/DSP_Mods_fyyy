@@ -30,7 +30,7 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(Configuration)' == 'Release'">
-    <Exec Command="powershell -NoProfile -NonInteractive -Command &quot;Compress-Archive -Force -DestinationPath 'package/$(ProjectName)-$(Version).zip' -LiteralPath '$(TargetPath)', 'package/icon.png', 'package/manifest.json', 'package/README.md'&quot;" />
+    <Exec Command="powershell -NoProfile -NonInteractive -Command &quot;Compress-Archive -Force -DestinationPath 'package/$(ProjectName)-$(Version).zip' -LiteralPath '$(TargetPath)', 'package/icon.png', 'package/manifest.json', 'package/README.md', 'package/CHANGELOG.md'&quot;" />
   </Target>
 
 </Project>
