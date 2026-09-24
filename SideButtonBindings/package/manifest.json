@@ -1,0 +1,9 @@
+{
+  "name": "SideButtonBindings",
+  "version_number": "1.0.0",
+  "website_url": "https://github.com/FyisFe/DSP_Mods_fyyy",
+  "description": "Allow mouse side buttons, including modifier combinations, in key bindings. / 允许使用鼠标侧键及其组合键设置快捷键",
+  "dependencies": [
+    "xiaoye97-BepInEx-5.4.17"
+  ]
+}

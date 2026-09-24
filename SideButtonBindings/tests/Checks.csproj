@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <GameManagedDir Condition="'$(GameManagedDir)' == ''">C:\Program Files (x86)\Applications\Steam\steamapps\common\Dyson Sphere Program\DSPGAME_Data\Managed</GameManagedDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../SideButtonBindings.csproj" />
+    <Reference Include="Assembly-CSharp" HintPath="$(GameManagedDir)/Assembly-CSharp.dll" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(GameManagedDir)/UnityEngine.CoreModule.dll" />
+  </ItemGroup>
+</Project>
