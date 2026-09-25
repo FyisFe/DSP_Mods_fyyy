@@ -9,7 +9,7 @@ using UXAssist.UI;
 namespace InterstellarLogisticsOpt;
 
 [BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, PluginInfo.PLUGIN_VERSION)]
-[BepInDependency(UXAssist.PluginInfo.PLUGIN_GUID)]
+[BepInDependency(UXAssist.PluginInfo.PLUGIN_GUID, "1.6.0")]
 public class InterstellarLogisticsOptPlugin : BaseUnityPlugin
 {
     public static ConfigEntry<bool> ModEnabled;

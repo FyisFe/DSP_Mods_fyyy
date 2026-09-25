@@ -1,5 +1,24 @@
 # Logistics capture results
 
+## Release 1.2.1 game compatibility
+
+Verified on 2026-09-24 against DSP 0.10.35.29088, game assembly MVID `ee6dc40f-a6a2-4b39-b220-81c6de923db6`, SHA-256 `C43A484F6ADF8A9E4B956156047070891B46860D5B5C707BA1377B6A2AF25732`. The existing normalized `DetermineDispatch` IL signature still matches. Native scheduling, priority-lock rules and the thread barrier before lock aging retain the required contracts. Unverified builds retain native dispatch and scheduling.
+
+The [existing checks](../LogisticsProfiler/README.md#构建与离线检查) pass on both .NET Framework and the game's bundled Mono: 5,952 native/optimized state comparisons, 24 dispatch scenarios, factors 1/2/5/30, exact `1/N` counts, configuration/pool/time changes, fallback, exceptions and profiler integration. These checks execute the original game DLL, not the stripped compile-time reference. No new in-game UI, save-throughput or UPS capture was performed.
+
+Release compilation uses [upstream UXAssist 1.6.0](https://github.com/soarqin/DSP_Mods/commit/d084f9cf75b29bb4f027b3b4152528ffe7439e7d), including its unchanged configuration-window and localization APIs, with zero warnings/errors. Both the BepInEx attribute and package manifest require UXAssist 1.6.0. Its CommonAPI and DSPModSave dependencies remain owned by UXAssist. The package contains only this plugin and its manifest, README, CHANGELOG and icon.
+
+Build against a DSP_Mods checkout containing UXAssist 1.6.0 and current publicized game references. `DSPModsDir` defaults to the sibling `DSP_Mods` checkout; override it to validate an isolated upstream checkout without changing another working branch:
+
+```powershell
+dotnet build InterstellarLogisticsOpt/InterstellarLogisticsOpt.csproj -c Release -t:Rebuild -p:DSPModsDir=C:/path/to/DSP_Mods
+```
+
+| Artifact | SHA-256 |
+|---|---|
+| Release 1.2.1 DLL | `9C5505EC6224C7ACF26F87E91C3D114C75BE5027508E0F2C9CFD53FBF74171B7` |
+| `package/InterstellarLogisticsOpt-1.2.1.zip` | `E73EF0FA00DA6B06B894E368A4FC5CFAD7C91B2EE1AB6C77AD645E6DFAF09F4E` |
+
 ## Release 1.2.0
 
 The release retains 1.1.0's station-ID phase dispersion, plus the dispatch-state fixes and redundant-read optimization. It accepts cross-station priority differences. Lock aging and return loading remain native; there is no dispatch budget, shared clock or suspended scan. [The package README](package/README.md) owns the behavior and tradeoffs, and [CHANGELOG.md](package/CHANGELOG.md) describes the changes from 1.1.0.
