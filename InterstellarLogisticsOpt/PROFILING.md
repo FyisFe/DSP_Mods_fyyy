@@ -2,14 +2,7 @@
 
 ## Release 1.2.1 game compatibility
 
-Verified game builds:
-
-| DSP version | Checked | Assembly MVID | Assembly SHA-256 |
-|---|---|---|---|
-| 0.10.35.29057 | 2026-09-23 | `9d8957ec-44bb-4b81-9e0b-0ec4de39ccfa` | `E75D3FE4B6A9CA822766189F826BA3A8348DFB7E301AA37FF6779DB29A83FD8D` |
-| 0.10.35.29088 | 2026-09-24 | `ee6dc40f-a6a2-4b39-b220-81c6de923db6` | `C43A484F6ADF8A9E4B956156047070891B46860D5B5C707BA1377B6A2AF25732` |
-
-The existing normalized `DetermineDispatch` IL signature matches both builds. Native scheduling, priority-lock rules and the thread barrier before lock aging retain the required contracts. Both MVIDs are accepted; other builds retain native dispatch and scheduling.
+Verified on 2026-09-24 against DSP 0.10.35.29088, game assembly MVID `ee6dc40f-a6a2-4b39-b220-81c6de923db6`, SHA-256 `C43A484F6ADF8A9E4B956156047070891B46860D5B5C707BA1377B6A2AF25732`. The existing normalized `DetermineDispatch` IL signature still matches. Native scheduling, priority-lock rules and the thread barrier before lock aging retain the required contracts. Unverified builds retain native dispatch and scheduling.
 
 The [existing checks](../LogisticsProfiler/README.md#构建与离线检查) pass on both .NET Framework and the game's bundled Mono: 5,952 native/optimized state comparisons, 24 dispatch scenarios, factors 1/2/5/30, exact `1/N` counts, configuration/pool/time changes, fallback, exceptions and profiler integration. These checks execute the original game DLL, not the stripped compile-time reference. No new in-game UI, save-throughput or UPS capture was performed.
 
@@ -24,7 +17,7 @@ dotnet build InterstellarLogisticsOpt/InterstellarLogisticsOpt.csproj -c Release
 | Artifact | SHA-256 |
 |---|---|
 | Release 1.2.1 DLL | `9C5505EC6224C7ACF26F87E91C3D114C75BE5027508E0F2C9CFD53FBF74171B7` |
-| `package/InterstellarLogisticsOpt-1.2.1.zip` | `A6C4882B3F2D7870EC99DD76B4C75ED43465646DB8A20A5B59D6EE3C36A30FBD` |
+| `package/InterstellarLogisticsOpt-1.2.1.zip` | `E73EF0FA00DA6B06B894E368A4FC5CFAD7C91B2EE1AB6C77AD645E6DFAF09F4E` |
 
 ## Release 1.2.0
 
