@@ -100,7 +100,7 @@ public sealed class Plugin : BaseUnityPlugin
             "清除该星系的黑雾地面基地、部队、中继站、太空建筑和火种，\n" +
             "同时清除已派往该星系的在途火种。\n" +
             $"按当前星系上限生成 {capacity} 个有物质、零能量的未完工中枢核心。\n\n" +
-            "确认后立即执行，不自动保存或备份。",
+            "操作有风险，请提前备份存档。",
             "取消", "确认绝育", UIMessageBox.WARNING, null,
             () => _pending = () => Execute(data, star, capacity));
     }
