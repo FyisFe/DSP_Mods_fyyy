@@ -1,6 +1,5 @@
 using System;
 using BepInEx;
-using BepInEx.Configuration;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,15 +9,12 @@ namespace DarkFogSterilizer;
 [BepInIncompatibility("dsp.nebula-multiplayer")]
 public sealed class Plugin : BaseUnityPlugin
 {
-    private ConfigEntry<KeyboardShortcut> _shortcut;
     private Action _pending;
     private Button _button;
 
     private void Awake()
     {
-        _shortcut = Config.Bind("操作", "绝育星系", new KeyboardShortcut(KeyCode.X, KeyCode.LeftControl, KeyCode.LeftAlt),
-            "在星图中选中恒星或行星后，打开绝育确认弹窗。");
-        Logger.LogInfo("DarkFogSterilizer loaded. Use the starmap's 绝育星系 button or Ctrl+Alt+X.");
+        Logger.LogInfo("DarkFogSterilizer loaded. Use the starmap's 绝育星系 button.");
     }
 
     private void Update()
@@ -36,7 +32,6 @@ public sealed class Plugin : BaseUnityPlugin
         if (!map.active) return;
         if (_button == null) CreateButton(map);
         _button.interactable = UIMessageBox.activeCount == 0;
-        if (!VFInput.inputing && _shortcut.Value.IsDown()) Confirm();
     }
 
     private void CreateButton(UIStarmap map)
@@ -44,8 +39,8 @@ public sealed class Plugin : BaseUnityPlugin
         var go = new GameObject("dark-fog-sterilize", typeof(RectTransform), typeof(Image), typeof(Button));
         var rect = (RectTransform)go.transform;
         rect.SetParent(map.screenCanvas.transform, false);
-        rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 1f);
-        rect.anchoredPosition = new Vector2(0f, -50f);
+        rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0.5f, 0f);
+        rect.anchoredPosition = new Vector2(0f, 24f);
         rect.sizeDelta = new Vector2(160f, 36f);
 
         var background = go.GetComponent<Image>();
