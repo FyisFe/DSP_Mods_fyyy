@@ -1,0 +1,9 @@
+{
+  "name": "DarkFogSterilizer",
+  "version_number": "0.1.0",
+  "website_url": "https://github.com/FyisFe/DSP_Mods_fyyy",
+  "description": "Clear a star system's Dark Fog and fill its hive capacity with dormant cores. / 清理指定星系的黑雾，并补满绝育中枢核心",
+  "dependencies": [
+    "xiaoye97-BepInEx-5.4.17"
+  ]
+}
