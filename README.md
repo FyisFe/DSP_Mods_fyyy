@@ -11,6 +11,7 @@ Independent mods for Dyson Sphere Program by FyisFe.
 | [BlueprintSearch](BlueprintSearch/) | 在蓝图库中搜索蓝图 |
 | [BuildingPosViewer](BuildingPosViewer/) | 查看并复制建筑的 x、y、z 坐标 |
 | [DashboardOverhaul](DashboardOverhaul/package/README.md) | 改善仪表盘的分页、图表整理和操作体验 |
+| [DarkFogSterilizer](DarkFogSterilizer/README.md) | 清理指定星系的黑雾，并按星系上限补满绝育中枢核心 |
 | [FastTinderLaunch](FastTinderLaunch/) | 恢复旧版 100% 黑雾火种发射概率，可在 UXAssist 中开关 |
 | [FullPhotonReceiver](FullPhotonReceiver/package/README.md) | 让光子与发电模式的射线接收站忽略太阳朝向和戴森球供能限制 |
 | [IcarusModelReplacement](IcarusModelReplacement/README.md) | 替换伊卡洛斯外观，内置咕嘎，也可加载自定义模型 |
