@@ -1,5 +1,15 @@
 # Changelog / 更新日志
 
+## 1.2.2
+
+### 中文
+
+- 适配游戏 0.10.35.29104，恢复派船计算优化和相位分散调度。
+
+### English
+
+- Support game 0.10.35.29104, restoring dispatch optimization and staggered scheduling.
+
 ## 1.2.1
 
 ### 中文
