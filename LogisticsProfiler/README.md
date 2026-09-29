@@ -91,7 +91,7 @@ ILO 的相位分散可能改变跨塔优先级顺序，使用限制见[模组说
 
 这些列是分支事件，**不是互斥的未发船原因或各分支耗时**。例如一个候选可能同时受航程和翘曲器限制；反向搜索失败后仍可能成功派出取货船。供需量不足时也可能继续维护对端优先级锁。`reverse_visit` 与外层访问数分开统计，避免把嵌套搜索误当成外层候选环长度。
 
-详细插桩校验包含操作数、跳转目标和异常区域的目标方法签名；字段类型使用明确的完整名称，避免 .NET Framework 与 Unity Mono 的反射显示格式差异。已验证的游戏版本见[ILO 兼容性记录](../InterstellarLogisticsOpt/PROFILING.md#release-121-game-compatibility)。探针先校验原版 IL 并插桩，ILO 再插入跳过冗余工作的分支，因此计数反映实际执行的候选访问和锁函数调用。游戏更新或其他更早运行的 transpiler 改写方法导致签名不匹配时，本插件停止诊断，保留对方的方法体，不阻止对方安装补丁。如果在本插件启动时发现不匹配，还会撤销自己的全部补丁并打印 `Unsupported DetermineDispatch body`；采集期间发现则以 `diagnostic_error` 结束，并在 metadata 记录原因。可以关闭 `DispatchDetails` 后重启，使用普通计时模式。
+详细插桩校验包含操作数、跳转目标和异常区域的目标方法签名；字段类型使用明确的完整名称，避免 .NET Framework 与 Unity Mono 的反射显示格式差异。已验证的游戏版本见[ILO 兼容性记录](../InterstellarLogisticsOpt/PROFILING.md#game-compatibility)。探针先校验原版 IL 并插桩，ILO 再插入跳过冗余工作的分支，因此计数反映实际执行的候选访问和锁函数调用。游戏更新或其他更早运行的 transpiler 改写方法导致签名不匹配时，本插件停止诊断，保留对方的方法体，不阻止对方安装补丁。如果在本插件启动时发现不匹配，还会撤销自己的全部补丁并打印 `Unsupported DetermineDispatch body`；采集期间发现则以 `diagnostic_error` 结束，并在 metadata 记录原因。可以关闭 `DispatchDetails` 后重启，使用普通计时模式。
 
 针对[已发现的 planetId 2704 / P3 和 P5 热点](../InterstellarLogisticsOpt/PROFILING.md)，设置 `Seconds=180`、`SampleEvery=64`、`DispatchDetails=true`，分别从同一原始存档重新读档采集上述 A/B/C 分组。保持相同预热、视角与其他 mod 设置；开始采样后不改配置。比较候选访问和分支分布；生产吞吐仍需更长的游戏时间验证。
 
