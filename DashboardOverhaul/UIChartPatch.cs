@@ -85,7 +85,7 @@ public static class UIChartPatch
         var stat = charts.statPlans[id];
         dash.CloseChartPopupMenu();
         ChartRename.CancelIfTargeting(chart);
-        UIMessageBox.Show(Loc.L("删除统计项", "Delete statistic"),
+        var dialog = UIMessageBox.Show(Loc.L("删除统计项", "Delete statistic"),
             string.Format(Loc.L("删除统计项“{0}”？\n将移除其全部 {1} 个图表（包括其他页面和监控视图），以及侧栏中的统计项。",
                 "Delete statistic “{0}”?\nThis removes all {1} associated charts, including other pages and watch views, and the sidebar statistic."),
                 stat.displayName, PageOps.ChartCount(charts, id)),
@@ -101,6 +101,7 @@ public static class UIChartPatch
                 dash.DetermineCharts();
                 dash.statboard.DetermineEntryVisible();
             }));
+        ConfirmHotkey.Attach(dialog); // Enter confirms, like clicking 确定
     }
 
     [HarmonyPrefix]

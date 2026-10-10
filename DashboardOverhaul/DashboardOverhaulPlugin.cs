@@ -13,10 +13,22 @@ public class DashboardOverhaulPlugin : BaseUnityPlugin
 
     private void Awake()
     {
+        ModConfig.Bind(Config);
+
         _harmony = new Harmony(PluginInfo.PLUGIN_GUID);
         _harmony.PatchAll(typeof(UIDashboardPatch));
         _harmony.PatchAll(typeof(UIChartPatch));
         _harmony.PatchAll(typeof(DashboardLayoutPatch));
+        _harmony.PatchAll(typeof(ChartHotkeys));
+        _harmony.PatchAll(typeof(ChartTitleStyle));
+        _harmony.PatchAll(typeof(ProductionSpeedLayout));
+        _harmony.PatchAll(typeof(ConfirmHotkeyPatch));
+        _harmony.PatchAll(typeof(DashboardKeyPatch));
+        _harmony.PatchAll(typeof(StatPlanShortcutPatch));
+        _harmony.PatchAll(typeof(ChartPlacement));
+        _harmony.PatchAll(typeof(ResourceRateBars));
+        _harmony.PatchAll(typeof(ChartLockPersist));
+        _harmony.PatchAll(typeof(ChartStyleExtras));
 
         Logger.LogInfo("DashboardOverhaul loaded.");
     }

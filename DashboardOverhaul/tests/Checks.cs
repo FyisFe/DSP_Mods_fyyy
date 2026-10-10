@@ -24,27 +24,58 @@ internal static class Checks
 
     private static void Main(string[] args)
     {
-        Require(args.Length == 1, "Usage: Checks <game-managed-dir>");
-        AppDomain.CurrentDomain.AssemblyResolve += (_, e) =>
+        // A failed check must end as a plain non-zero exit: an unhandled exception would raise a Windows
+        // crash dialog, which is both noisy and easy to mistake for a hang.
+        try
         {
-            string path = Path.Combine(args[0], new AssemblyName(e.Name).Name + ".dll");
-            return File.Exists(path) ? Assembly.LoadFrom(path) : null;
-        };
-        Run();
+            Require(args.Length == 1, "Usage: Checks <game-managed-dir>");
+            AppDomain.CurrentDomain.AssemblyResolve += (_, e) =>
+            {
+                string path = Path.Combine(args[0], new AssemblyName(e.Name).Name + ".dll");
+                return File.Exists(path) ? Assembly.LoadFrom(path) : null;
+            };
+            Run();
+        }
+        catch (Exception e)
+        {
+            Console.Error.WriteLine("CHECKS FAILED: " + e.Message);
+            Environment.Exit(1);
+        }
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static void Run()
     {
         // Unity UI methods cannot be JIT-patched outside the engine; check their target signatures.
-        foreach (var type in new[] { typeof(UIDashboardPatch), typeof(UIChartPatch), typeof(DashboardLayoutPatch) })
+        foreach (var type in new[] { typeof(UIDashboardPatch), typeof(UIChartPatch), typeof(DashboardLayoutPatch),
+            typeof(ChartHotkeys), typeof(ChartTitleStyle), typeof(ProductionSpeedLayout), typeof(ConfirmHotkeyPatch),
+            typeof(DashboardKeyPatch), typeof(StatPlanShortcutPatch), typeof(ChartPlacement),
+            typeof(ResourceRateBars), typeof(ChartLockPersist), typeof(ChartStyleExtras) })
             foreach (var method in type.GetMethods(BindingFlags.Static | BindingFlags.NonPublic))
                 foreach (HarmonyPatch patch in method.GetCustomAttributes(typeof(HarmonyPatch), false))
                     Require(AccessTools.DeclaredMethod(patch.info.declaringType, patch.info.methodName,
                         patch.info.argumentTypes) != null, "missing Harmony target: " + patch.info.methodName);
         CheckHeader();
         CheckRenameBounds();
+        CheckLockSlotSaved();
         CheckLayout();
+    }
+
+    /// <summary>The chart lock lives in a spare display parameter, so the save must carry all 16 of them.</summary>
+    private static void CheckLockSlotSaved()
+    {
+        var chart = new ChartData { displayTypeParams = new int[ChartData.MAX_DISPLAY_TYPE_COUNT] };
+        chart.displayTypeParams[ChartData.MAX_DISPLAY_TYPE_COUNT - 1] = 1;
+        using (var stream = new MemoryStream())
+        {
+            // The writer must leave the stream open so its length can be inspected.
+            using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
+                chart.Export(writer);
+            // 12 scalar fields (including the parameter count) + all 16 display parameters, four bytes each.
+            Require(stream.Length == (12 + ChartData.MAX_DISPLAY_TYPE_COUNT) * 4,
+                "the chart save format must include every display parameter, including the lock slot");
+        }
+        Console.WriteLine("Chart lock slot save check passed.");
     }
 
     private static void CheckHeader()
@@ -55,6 +86,9 @@ internal static class Checks
         float height = Constant("kHeaderHeight");
         float tabHeight = Constant("kTabHeight");
         float left = Constant("kBaseLeftMargin");
+        float statsPanelButton = Constant("kStatsPanelButtonWidth");
+        float gearButton = Constant("kGearButtonSize");
+        float gearGap = Constant("kGearButtonGap");
         Require(-Constant("kTopOffset") + tabHeight + 10 <= height,
             "header must clear the first chart's 10-pixel resize hit area");
         var fit = type.GetMethod("ComputePerTabMax", flags, null, new[] { typeof(float), typeof(int) }, null);
@@ -64,8 +98,9 @@ internal static class Checks
                 {
                     float width = screenWidth / scale;
                     float tabWidth = (float)fit.Invoke(null, new object[] { width, count });
-                    Require(left + count * (tabWidth + 4) + tabHeight + 16 <= width + 0.01f,
-                        "all tabs and the add button must fit the header at supported UI scales");
+                    Require(2 * left + count * (tabWidth + 4) + tabHeight + 16 + statsPanelButton + gearButton + gearGap
+                        <= width + 0.01f,
+                        "all tabs, the add-page button and the header buttons must fit at supported UI scales");
                 }
         Console.WriteLine("Dashboard header geometry checks passed.");
     }

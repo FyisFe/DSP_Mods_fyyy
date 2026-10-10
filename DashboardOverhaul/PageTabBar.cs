@@ -30,6 +30,10 @@ public class PageTabBar
     private Text _emptyText;
     private Button _emptyAdd;
     private Button _emptyCopy;
+    private Button _statsPanelButton;
+    private Button _gearButton;
+    private Image _gearIcon;
+    private Text _gearFallback;
     private int _emptyState = -1;
     private RectTransform _notice;
     private Text _noticeText;
@@ -46,6 +50,9 @@ public class PageTabBar
     private const float kChartLeftMargin = 32f; // Keep chart resize handles clear of the native handle when the sidebar is closed.
     private const float kBaseLeftMargin = 4f;
     private const float kTopOffset = -4f;
+    private const float kStatsPanelButtonWidth = 96f; // right-aligned "statistics panel" button reserved in ComputePerTabMax
+    private const float kGearButtonSize = 28f;        // square page-settings gear left of that button
+    private const float kGearButtonGap = 4f;
 
     public void Build(UIDashboard dashboard)
     {
@@ -99,7 +106,8 @@ public class PageTabBar
         _root.anchorMin = new Vector2(0f, 1f);
         _root.anchorMax = new Vector2(0f, 1f);
         _root.pivot = new Vector2(0f, 1f);
-        _root.anchoredPosition = new Vector2(kBaseLeftMargin, kTopOffset);
+        // The page-settings gear sits at the far left, so the tabs start after it.
+        _root.anchoredPosition = new Vector2(kBaseLeftMargin + kGearButtonSize + kGearButtonGap, kTopOffset);
         _root.sizeDelta = new Vector2(0f, kTabHeight);
 
         var layout = go.AddComponent<HorizontalLayoutGroup>();
@@ -111,6 +119,7 @@ public class PageTabBar
         layout.childControlHeight = true;
         var fitter = go.AddComponent<ContentSizeFitter>();
         fitter.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
+        BuildStatsPanelButton();
         BuildEmptyPanel();
     }
 
@@ -140,6 +149,10 @@ public class PageTabBar
         _root = null;
         _renameInput = null;
         _addButton = null;
+        _statsPanelButton = null;
+        _gearButton = null;
+        _gearIcon = null;
+        _gearFallback = null;
         _placeholder = null;
         _draggingTab = null;
         _layout = null;
@@ -153,6 +166,7 @@ public class PageTabBar
         float width = ComputePerTabMax();
         if (_draggingTab == null && !Mathf.Approximately(width, _tabWidth)) ResizeTabs(width);
         if (_renamingPage != null) PositionRenameInput();
+        UpdateGearIcon();
         UpdateEmptyPanel();
         if (_notice != null && _notice.gameObject.activeSelf)
         {
@@ -262,7 +276,11 @@ public class PageTabBar
     private static float ComputePerTabMax(float dashW, int count)
     {
         if (dashW <= 1f) return kTabMaxWidth; // not laid out yet
-        float available = dashW - kBaseLeftMargin - 16f - kTabHeight - count * 4f;
+        // Reserve, on the left: the page-settings gear plus its gap; on the right: a gap, the page "+"
+        // button and the "statistics panel" button; plus both margins.
+        float reserved = 2f * kBaseLeftMargin + 16f + kTabHeight
+            + kStatsPanelButtonWidth + kGearButtonSize + kGearButtonGap;
+        float available = dashW - reserved - count * 4f;
         return Mathf.Clamp(available / count, 32f, 240f);
     }
 
@@ -705,17 +723,140 @@ public class PageTabBar
         _emptyPanel.SetParent(Dashboard.chartContentRt, false);
         _emptyPanel.sizeDelta = new Vector2(460f, 112f);
         _emptyText = DashboardUi.Text(_emptyPanel, _font, "", TextAnchor.UpperCenter);
-        _emptyAdd = CreateAction(_emptyPanel, Loc.L("添加图表", "Add charts"), -100f, 184f, () =>
-        {
-            if (Dashboard.charts.statPlans.count == 0)
-            {
-                UIRoot.instance.uiGame.OpenProductionWindow();
-                UIRealtimeTip.Popup(Loc.L("在统计窗口中选择需要监控的统计项", "Choose a statistic to monitor in the statistics window"));
-            }
-            else if (!Dashboard.showSidebar) Dashboard.OnSidebarBtnClick(0);
-        });
+        _emptyAdd = CreateAction(_emptyPanel, Loc.L("添加图表", "Add charts"), -100f, 184f, ShowAddChartUi);
         _emptyCopy = CreateAction(_emptyPanel, Loc.L("复制其他页面", "Copy another page"), 100f, 184f, OpenCopyMenu);
         go.SetActive(false);
+    }
+
+    /// <summary>Add-chart entry point shared by the empty page's button and the header button: open the
+    /// statistics window when no statistic exists yet, otherwise open the sidebar to add a chart.</summary>
+    private void ShowAddChartUi()
+    {
+        if (Dashboard == null || Dashboard.charts == null) return;
+        if (Dashboard.charts.statPlans.count == 0)
+        {
+            UIRoot.instance.uiGame.OpenProductionWindow();
+            UIRealtimeTip.Popup(Loc.L("在统计窗口中选择需要监控的统计项", "Choose a statistic to monitor in the statistics window"));
+        }
+        else if (!Dashboard.showSidebar) Dashboard.OnSidebarBtnClick(0);
+    }
+
+    /// <summary>Right-aligned header buttons: the "statistics panel" button (same as pressing P) and, left
+    /// of it, the page-settings gear that styles or locks every statistic of the current page.</summary>
+    private void BuildStatsPanelButton()
+    {
+        var go = new GameObject("DO_StatsPanelBtn", typeof(RectTransform));
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(_header, false);
+        rt.anchorMin = rt.anchorMax = new Vector2(1f, 1f);
+        rt.pivot = new Vector2(1f, 1f);
+        rt.anchoredPosition = new Vector2(-kBaseLeftMargin, kTopOffset);
+        rt.sizeDelta = new Vector2(kStatsPanelButtonWidth, kTabHeight);
+
+        var bg = go.AddComponent<Image>();
+        bg.raycastTarget = true;
+
+        var button = go.AddComponent<Button>();
+        button.targetGraphic = bg;
+        DashboardUi.StyleButton(button, new Color(0.13f, 0.3f, 0.4f, 0.95f));
+        var label = DashboardUi.Text(rt, _font, Loc.L("分析面板", "Statistics"));
+        label.alignment = TextAnchor.MiddleCenter;
+        // The header row is short; without overflow the game font can wrap and clip the label.
+        label.horizontalOverflow = HorizontalWrapMode.Overflow;
+        label.verticalOverflow = VerticalWrapMode.Overflow;
+        DashboardUi.Tip(go, Loc.L("分析面板", "Statistics panel"),
+            Loc.L("与按 P 相同：打开或关闭统计面板", "Same as pressing P: opens or closes the statistics panel"));
+        button.onClick.AddListener(ToggleStatisticsPanel);
+        _statsPanelButton = button;
+
+        BuildGearButton();
+    }
+
+    /// <summary>Gear button that opens the page-wide style/lock menu for the current page. It sits at the
+    /// far left of the header, before the first page tab.</summary>
+    private void BuildGearButton()
+    {
+        var go = new GameObject("DO_GearBtn", typeof(RectTransform));
+        var rt = (RectTransform)go.transform;
+        rt.SetParent(_header, false);
+        rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot = new Vector2(0f, 1f);
+        rt.anchoredPosition = new Vector2(kBaseLeftMargin, kTopOffset);
+        rt.sizeDelta = new Vector2(kGearButtonSize, kTabHeight);
+
+        var bg = go.AddComponent<Image>();
+        bg.raycastTarget = true;
+
+        var button = go.AddComponent<Button>();
+        button.targetGraphic = bg;
+        DashboardUi.StyleButton(button, new Color(0.13f, 0.3f, 0.4f, 0.95f));
+
+        // Reuse the gear a chart shows in its corner. The button is built before any chart exists, so the
+        // icon stays empty here and is filled by UpdateGearIcon once the sprite can be borrowed.
+        var iconGo = new GameObject("Icon", typeof(RectTransform));
+        var iconRt = (RectTransform)iconGo.transform;
+        iconRt.SetParent(rt, false);
+        iconRt.anchorMin = iconRt.anchorMax = new Vector2(0.5f, 0.5f);
+        iconRt.pivot = new Vector2(0.5f, 0.5f);
+        iconRt.anchoredPosition = Vector2.zero;
+        iconRt.sizeDelta = new Vector2(18f, 18f);
+        // Reuse the icon the game's own style menu entry shows (generic menu icon 3). It may not be loaded
+        // yet when this runs, so UpdateGearIcon keeps trying and the text below covers the gap.
+        _gearIcon = iconGo.AddComponent<Image>();
+        _gearIcon.raycastTarget = false;
+        _gearIcon.sprite = GearSprite();
+        _gearFallback = DashboardUi.Text(rt, _font, Loc.L("样式", "Style"));
+        if (_gearIcon.sprite != null) _gearFallback.gameObject.SetActive(false);
+
+        DashboardUi.Tip(go, Loc.L("页面设置", "Page settings"),
+            Loc.L("对当前页所有统计项切换样式或锁定", "Switch the style or lock for every statistic on this page"));
+        button.onClick.AddListener(OpenGearMenu);
+        _gearButton = button;
+    }
+
+    /// <summary>Fill the gear icon as soon as the game's menu icons are available.</summary>
+    private void UpdateGearIcon()
+    {
+        if (_gearIcon == null || _gearIcon.sprite != null) return;
+        var sprite = GearSprite();
+        if (sprite == null) return;
+        _gearIcon.sprite = sprite;
+        if (_gearFallback != null) _gearFallback.gameObject.SetActive(false);
+    }
+
+    /// <summary>The icon the game's own style menu entry uses (index 3 of the generic menu icons).</summary>
+    private static Sprite GearSprite()
+    {
+        var builtin = Configs.builtin;
+        var sprites = builtin != null ? builtin.genericMenuButtonSprites : null;
+        if (sprites == null || sprites.Length <= 3) return null;
+        return sprites[3];
+    }
+
+    private void OpenGearMenu()
+    {
+        if (Dashboard == null || _gearButton == null) return;
+        PageGearMenu.Open(Dashboard, (RectTransform)_gearButton.transform);
+    }
+
+    /// <summary>Whether the cursor is over the page-settings gear button; the style hotkeys then act on
+    /// the whole page instead of a single chart.</summary>
+    public bool PointerOverGear
+    {
+        get
+        {
+            if (_gearButton == null || !_gearButton.gameObject.activeInHierarchy) return false;
+            var root = UIRoot.instance;
+            var camera = root != null && root.overlayCanvas != null ? root.overlayCanvas.worldCamera : null;
+            return RectTransformUtility.RectangleContainsScreenPoint(
+                (RectTransform)_gearButton.transform, Input.mousePosition, camera);
+        }
+    }
+
+    private void ToggleStatisticsPanel()
+    {
+        if (Dashboard == null) return;
+        DashboardKeyPatch.ToggleStatisticsPanel(UIRoot.instance.uiGame);
     }
 
     private void UpdateEmptyPanel()
