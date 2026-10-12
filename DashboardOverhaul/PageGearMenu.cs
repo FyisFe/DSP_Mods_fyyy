@@ -178,7 +178,7 @@ public static class PageGearMenu
     {
         foreach (var data in page.chartDatas)
         {
-            ChartLockPersist.SetLocked(data, locked);
+            ChartLockPersist.SetLocked(data, locked); // writes the game's flag and the legacy slot
             ChartLockPersist.ApplyLockBorder(data, locked); // covers charts that are off screen
         }
 
@@ -187,11 +187,7 @@ public static class PageGearMenu
             foreach (var chart in pool)
                 if (chart != null && chart.inited && chart.chartData != null &&
                     page.chartDatas.Contains(chart.chartData))
-                {
-                    chart.chart_lock = locked;
                     ChartLockPersist.Repaint(chart);
-                }
-
     }
 
     private static bool HasGenericStyles()

@@ -61,7 +61,8 @@ internal static class Checks
         CheckLayout();
     }
 
-    /// <summary>The chart lock lives in a spare display parameter, so the save must carry all 16 of them.</summary>
+    /// <summary>The chart carries every display parameter in the save, including the spare slot that holds
+    /// the lock flag of saves written before the game stored the lock itself.</summary>
     private static void CheckLockSlotSaved()
     {
         var chart = new ChartData { displayTypeParams = new int[ChartData.MAX_DISPLAY_TYPE_COUNT] };
@@ -71,9 +72,10 @@ internal static class Checks
             // The writer must leave the stream open so its length can be inspected.
             using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
                 chart.Export(writer);
-            // 12 scalar fields (including the parameter count) + all 16 display parameters, four bytes each.
-            Require(stream.Length == (12 + ChartData.MAX_DISPLAY_TYPE_COUNT) * 4,
-                "the chart save format must include every display parameter, including the lock slot");
+            // 11 scalar fields, the lock flag (one byte since save version 1), the parameter count and all
+            // 16 display parameters, four bytes each.
+            Require(stream.Length == (11 + 1 + ChartData.MAX_DISPLAY_TYPE_COUNT) * 4 + 1,
+                "the chart save format must carry the lock flag and every display parameter");
         }
         Console.WriteLine("Chart lock slot save check passed.");
     }
