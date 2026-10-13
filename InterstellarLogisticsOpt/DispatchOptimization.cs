@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
@@ -9,10 +8,6 @@ namespace InterstellarLogisticsOpt;
 [HarmonyPatch(typeof(StationComponent), nameof(StationComponent.DetermineDispatch))]
 internal static class DispatchOptimization
 {
-    internal static readonly bool SupportedGame =
-        typeof(StationComponent).Module.ModuleVersionId == new Guid("9d8957ec-44bb-4b81-9e0b-0ec4de39ccfa") ||
-        typeof(StationComponent).Module.ModuleVersionId == new Guid("ee6dc40f-a6a2-4b39-b220-81c6de923db6") ||
-        typeof(StationComponent).Module.ModuleVersionId == new Guid("7c753b2c-7be8-45e8-ae2a-51c600ac1211");
     internal static volatile bool Enabled;
     internal static string Failure;
 
@@ -47,9 +42,8 @@ internal static class DispatchOptimization
                 code[i + 7].IsLdloc() && code[i + 8].LoadsField(storage))
                 sites.Add(i);
         }
-        // ponytail: two verified lock-only branches; recheck game IL when this shape changes.
-        if (!SupportedGame ||
-            sites.Count != 2 || sites.Any(i => code[i + 7].blocks.Count != 0))
+        // Both lock-only branches must match outside exception-region boundaries.
+        if (sites.Count != 2 || sites.Any(i => code[i + 7].blocks.Count != 0))
         {
             Failure = "Unsupported DetermineDispatch body; dispatch optimization was not applied.";
             return code;

@@ -11,7 +11,7 @@ internal static class DispatchScheduler
     private static bool Prefix(GalacticTransport __instance, long time)
     {
         int factor = Factor;
-        if (!DispatchOptimization.Enabled || factor <= 1 || !DispatchOptimization.SupportedGame || DispatchOptimization.Failure != null)
+        if (!DispatchOptimization.Enabled || factor <= 1 || DispatchOptimization.Failure != null)
             return true;
 
         var data = __instance.gameData;

@@ -123,4 +123,4 @@ python LogisticsProfiler/tests/run_mono.py `
 
 `run_mono.py` 在独立进程中加载游戏自带 Mono，执行同一套聚合、24 个调度分支场景、ILO 状态等价检查、调度时序检查和专项微基准，不连接或操作正在运行的游戏。无头进程不具备 Unity 原生调用，因此跳过飞船更新的绑定检查；完整的三个方法绑定仍由 .NET Framework 检查覆盖。两种运行时都必须接受同一个调度签名并拒绝实际操作数变化。
 
-当前离线检查使用[兼容性记录](../InterstellarLogisticsOpt/PROFILING.md#release-121-game-compatibility)中的游戏程序集，覆盖全部优先级、库存与订单边界、完整及过期锁、无闲船/低电量、开关状态、独立运行和 profiler 两种加载顺序。调度检查以原版调用确定航线资格和参数，核对系数 1/2/5/30 下的按塔相位规则及完整周期内的 `1/N` 次数，并覆盖塔池变更、异常、因子/时间切换、兼容回退及 profiler 的真实 tick 分组。微基准不能外推为存档 UPS。最新性能截图见[模组说明](../InterstellarLogisticsOpt/package/README.md)；profiler 采样及其版本、验证范围见[采样分析](../InterstellarLogisticsOpt/PROFILING.md)。
+当前离线检查使用[兼容性记录](../InterstellarLogisticsOpt/PROFILING.md#game-compatibility)中的游戏程序集，覆盖全部优先级、库存与订单边界、完整及过期锁、无闲船/低电量、开关状态、独立运行和 profiler 两种加载顺序。调度检查以原版调用确定航线资格和参数，核对系数 1/2/5/30 下的按塔相位规则及完整周期内的 `1/N` 次数，并覆盖塔池变更、异常、因子/时间切换、兼容回退及 profiler 的真实 tick 分组。微基准不能外推为存档 UPS。最新性能截图见[模组说明](../InterstellarLogisticsOpt/package/README.md)；profiler 采样及其版本、验证范围见[采样分析](../InterstellarLogisticsOpt/PROFILING.md)。

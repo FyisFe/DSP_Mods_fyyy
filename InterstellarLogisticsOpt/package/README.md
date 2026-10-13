@@ -3,7 +3,9 @@
 <details>
 <summary>中文看我</summary>
 
-减少星际运输塔寻找供需配对、决定派船时的 CPU 开销，适合物流塔较多的大型存档。适配游戏 0.10.35.29104，需要安装 [UXAssist](https://thunderstore.io/c/dyson-sphere-program/p/soarqin/UXAssist/) 1.6.0 或更高版本。
+减少星际运输塔寻找供需配对、决定派船时的 CPU 开销，适合物流塔较多的大型存档。已在游戏 0.10.35.29131 上完成离线兼容性验证，需要安装 [UXAssist](https://thunderstore.io/c/dyson-sphere-program/p/soarqin/UXAssist/) 1.6.0 或更高版本。
+
+不按游戏版本限制启用。派船补丁结构不匹配时，回退到原版派船和调度，并在日志中记录警告。
 
 ### 使用
 
@@ -54,7 +56,9 @@
 <details>
 <summary>README</summary>
 
-Reduces the CPU time spent matching supply and demand and dispatching interstellar ships in large saves. Supports game 0.10.35.29104 and requires [UXAssist](https://thunderstore.io/c/dyson-sphere-program/p/soarqin/UXAssist/) 1.6.0 or later.
+Reduces the CPU time spent matching supply and demand and dispatching interstellar ships in large saves. Offline compatibility checks pass on game 0.10.35.29131. Requires [UXAssist](https://thunderstore.io/c/dyson-sphere-program/p/soarqin/UXAssist/) 1.6.0 or later.
+
+Game versions do not restrict activation. If the dispatch patch structure does not match, the mod retains native dispatch and scheduling and logs a warning.
 
 ### Usage
 
