@@ -19,7 +19,7 @@ dotnet build InterstellarLogisticsOpt/InterstellarLogisticsOpt.csproj -c Release
 | Artifact | SHA-256 |
 |---|---|
 | Release 1.2.3 DLL | `3B6BA2F99B8A88498E39A5E8399525B759C18789452E63DA30C43117C08958E5` |
-| `package/InterstellarLogisticsOpt-1.2.3.zip` | `2480D30136A749BD666804F1FA5A519344DC127D1DD6500B25F284E1C229F2A2` |
+| `package/InterstellarLogisticsOpt-1.2.3.zip` | `E8A903A77821E303EAD6C04B9FBC1588F0CC04DD4F48DDCEDC5B4F1B347E27C2` |
 
 ## Release 1.2.0
 
