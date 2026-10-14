@@ -2,7 +2,7 @@
 
 ## Game compatibility
 
-Release 1.2.3 was verified on 2026-10-13 against DSP 0.10.35.29131, game assembly MVID `a20569b9-0b5f-40f9-837c-2fd70827adc4`, SHA-256 `74AC6162CEF8394A6021C8475132CAE4DF4F840871A99E63CC7D2C8297661BC0`. The matching decompiled source confirms native scheduling, priority-lock rules and the thread barrier before lock aging retain the required contracts. The profiler's existing normalized `DetermineDispatch` IL signature still matches.
+Release 1.2.3 was verified on 2026-10-14 against DSP 0.10.35.29145, game assembly MVID `4bd0041b-46ae-442c-aba2-460c8e3630d8`, SHA-256 `B84B60DF5A24947A014801F23B9B85D1E77853F42A331918E2DC85B153E50527`. The matching decompiled source confirms native scheduling, priority-lock rules and the thread barrier before lock aging retain the required contracts. The profiler's existing normalized `DetermineDispatch` IL signature still matches.
 
 The mod has no game-build allowlist. The dispatch transpiler requires both lock-only branch patterns and rejects insertion at exception-region boundaries; a failed match retains native dispatch and scheduling. Future changes to lock semantics or scheduling still require source review. The profiler retains its independent method-signature check for detailed instrumentation.
 
@@ -19,7 +19,7 @@ dotnet build InterstellarLogisticsOpt/InterstellarLogisticsOpt.csproj -c Release
 | Artifact | SHA-256 |
 |---|---|
 | Release 1.2.3 DLL | `3B6BA2F99B8A88498E39A5E8399525B759C18789452E63DA30C43117C08958E5` |
-| `package/InterstellarLogisticsOpt-1.2.3.zip` | `E8A903A77821E303EAD6C04B9FBC1588F0CC04DD4F48DDCEDC5B4F1B347E27C2` |
+| `package/InterstellarLogisticsOpt-1.2.3.zip` | `45936D159B7D1D5002DC9A955BC198E0B3C5F4F3DA603D38F2C669AA3655B65F` |
 
 ## Release 1.2.0
 
