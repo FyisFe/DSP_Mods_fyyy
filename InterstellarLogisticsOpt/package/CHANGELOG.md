@@ -1,5 +1,15 @@
 # Changelog / 更新日志
 
+## 1.2.3
+
+### 中文
+
+- 移除游戏程序集版本白名单，游戏更新不再仅因版本变化而停用优化；保留补丁结构不匹配时的原版回退。
+
+### English
+
+- Remove the game assembly version allowlist so version changes alone no longer disable optimization; retain native fallback when the patch structure does not match.
+
 ## 1.2.2
 
 ### 中文
