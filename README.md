@@ -8,6 +8,7 @@ Independent mods for Dyson Sphere Program by FyisFe.
 
 | 模组 | 用途 |
 |---|---|
+| [BlueprintCamera](BlueprintCamera/package/README.md) | 一键构图并匀速环绕整颗星球，为外部录像播放净画面镜头；支持高级路线编辑 |
 | [BlueprintSearch](BlueprintSearch/) | 在蓝图库中搜索蓝图 |
 | [BuildingPosViewer](BuildingPosViewer/) | 查看并复制建筑的 x、y、z 坐标 |
 | [DashboardOverhaul](DashboardOverhaul/package/README.md) | 改善仪表盘的分页、图表整理和操作体验 |

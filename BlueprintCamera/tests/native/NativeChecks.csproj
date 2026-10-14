@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <GameManagedDir Condition="'$(GameManagedDir)' == ''">C:\Program Files (x86)\Applications\Steam\steamapps\common\Dyson Sphere Program\DSPGAME_Data\Managed</GameManagedDir>
+    <BepInExDir Condition="'$(BepInExDir)' == ''">C:\Users\Yi\AppData\Roaming\r2modmanPlus-local\DysonSphereProgram\profiles\latest\BepInEx\core</BepInExDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../BlueprintCamera.csproj" AdditionalProperties="SkipPackage=true" />
+    <Reference Include="Assembly-CSharp" HintPath="$(GameManagedDir)/Assembly-CSharp.dll" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(GameManagedDir)/UnityEngine.CoreModule.dll" />
+    <Reference Include="UnityEngine.UIModule" HintPath="$(GameManagedDir)/UnityEngine.UIModule.dll" />
+    <Reference Include="0Harmony" HintPath="$(BepInExDir)/0Harmony.dll" />
+  </ItemGroup>
+</Project>
