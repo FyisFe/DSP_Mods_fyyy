@@ -1,0 +1,7 @@
+{
+  "name": "BlueprintCamera",
+  "version_number": "0.2.1",
+  "website_url": "https://github.com/FyisFe/DSP_Mods_fyyy",
+  "description": "Planet photography with saved views, distance-based camera paths and clean playback for external recording. / 蓝图摄影：保存机位、匀速运镜、球面巡航与净画面播放",
+  "dependencies": ["xiaoye97-BepInEx-5.4.17"]
+}
