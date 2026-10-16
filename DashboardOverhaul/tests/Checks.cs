@@ -9,7 +9,7 @@ using UnityEngine;
 
 internal static class Checks
 {
-    private static void Require(bool value, string message)
+    internal static void Require(bool value, string message)
     {
         if (!value) throw new Exception(message);
     }
@@ -24,26 +24,54 @@ internal static class Checks
 
     private static void Main(string[] args)
     {
-        Require(args.Length == 1, "Usage: Checks <game-managed-dir>");
-        AppDomain.CurrentDomain.AssemblyResolve += (_, e) =>
+        // A failed check must end as a plain non-zero exit: an unhandled exception would raise a Windows
+        // crash dialog, which is both noisy and easy to mistake for a hang.
+        try
         {
-            string path = Path.Combine(args[0], new AssemblyName(e.Name).Name + ".dll");
-            return File.Exists(path) ? Assembly.LoadFrom(path) : null;
-        };
-        Run();
+            Require(args.Length == 1, "Usage: Checks <game-managed-dir>");
+            AppDomain.CurrentDomain.AssemblyResolve += (_, e) =>
+            {
+                string path = Path.Combine(args[0], new AssemblyName(e.Name).Name + ".dll");
+                return File.Exists(path) ? Assembly.LoadFrom(path) : null;
+            };
+            Run();
+        }
+        catch (Exception e)
+        {
+            Console.Error.WriteLine("CHECKS FAILED: " + e.Message);
+            Environment.Exit(1);
+        }
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static void Run()
     {
         // Unity UI methods cannot be JIT-patched outside the engine; check their target signatures.
-        foreach (var type in new[] { typeof(UIDashboardPatch), typeof(UIChartPatch), typeof(DashboardLayoutPatch) })
+        var patchTypes = (Type[])typeof(DashboardOverhaulPlugin)
+            .GetField("PatchTypes", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
+        foreach (var type in patchTypes)
             foreach (var method in type.GetMethods(BindingFlags.Static | BindingFlags.NonPublic))
                 foreach (HarmonyPatch patch in method.GetCustomAttributes(typeof(HarmonyPatch), false))
-                    Require(AccessTools.DeclaredMethod(patch.info.declaringType, patch.info.methodName,
-                        patch.info.argumentTypes) != null, "missing Harmony target: " + patch.info.methodName);
+                {
+                    var original = AccessTools.DeclaredMethod(patch.info.declaringType, patch.info.methodName,
+                        patch.info.argumentTypes);
+                    Require(original != null, "missing Harmony target: " + patch.info.methodName);
+                    if (!method.IsDefined(typeof(HarmonyReversePatch), false)) continue;
+                    var parameters = method.GetParameters();
+                    var nativeParameters = original.GetParameters();
+                    int offset = original.IsStatic ? 0 : 1;
+                    Require(method.ReturnType == original.ReturnType && parameters.Length == nativeParameters.Length + offset,
+                        "reverse patch must preserve the native signature: " + method.Name);
+                    if (offset != 0) Require(parameters[0].ParameterType == original.DeclaringType,
+                        "reverse patch must receive the native instance: " + method.Name);
+                    for (int i = 0; i < nativeParameters.Length; i++)
+                        Require(parameters[i + offset].ParameterType == nativeParameters[i].ParameterType,
+                            "reverse patch parameter mismatch: " + method.Name);
+                }
         CheckHeader();
         CheckRenameBounds();
+        ChartChecks.Run();
+        ProductionChecks.Run();
         CheckLayout();
     }
 
@@ -51,10 +79,13 @@ internal static class Checks
     {
         const BindingFlags flags = BindingFlags.NonPublic | BindingFlags.Static;
         var type = typeof(PageTabBar);
-        float Constant(string name) => Convert.ToSingle(type.GetField(name, flags).GetRawConstantValue());
+        float Constant(string name) => Convert.ToSingle(typeof(DashboardView).GetField(name, flags).GetRawConstantValue());
         float height = Constant("kHeaderHeight");
-        float tabHeight = Constant("kTabHeight");
+        float tabHeight = Convert.ToSingle(type.GetField("kTabHeight", flags).GetRawConstantValue());
         float left = Constant("kBaseLeftMargin");
+        float statsPanelButton = Constant("kStatsPanelButtonWidth");
+        float gearButton = Constant("kGearButtonSize");
+        float gearGap = Constant("kGearButtonGap");
         Require(-Constant("kTopOffset") + tabHeight + 10 <= height,
             "header must clear the first chart's 10-pixel resize hit area");
         var fit = type.GetMethod("ComputePerTabMax", flags, null, new[] { typeof(float), typeof(int) }, null);
@@ -64,8 +95,9 @@ internal static class Checks
                 {
                     float width = screenWidth / scale;
                     float tabWidth = (float)fit.Invoke(null, new object[] { width, count });
-                    Require(left + count * (tabWidth + 4) + tabHeight + 16 <= width + 0.01f,
-                        "all tabs and the add button must fit the header at supported UI scales");
+                    Require(2 * left + count * (tabWidth + 4) + tabHeight + 16 + statsPanelButton + gearButton + gearGap
+                        <= width + 0.01f,
+                        "all tabs, the add-page button and the header buttons must fit at supported UI scales");
                 }
         Console.WriteLine("Dashboard header geometry checks passed.");
     }
@@ -140,13 +172,14 @@ internal static class Checks
             "moving preserves statistic and display configuration");
 
         var copy = Page();
+        chart.locked = true;
         chart.displayTypeParams[3] = 91;
         Require(PageOps.CopyIntoEmptyPage(target, copy), "copy into an empty page");
         var cloned = copy.chartDatas[1];
         Require(cloned != chart && cloned.statPlanId == chart.statPlanId && cloned.size == chart.size &&
             cloned.pos == chart.pos && cloned.depth == chart.depth && cloned.presetIndex == 2 &&
             cloned.genericStyleIndex == 3 && cloned.backgroundStyleIndex == 4 && cloned.borderStyleIndex == 5 &&
-            cloned.displayTypeParams[3] == 91, "copy all display settings while sharing only the statistic");
+            cloned.locked && cloned.displayTypeParams[3] == 91, "copy all display settings while sharing only the statistic");
         cloned.displayTypeParams[3] = 12;
         Require(chart.displayTypeParams[3] == 91, "copied display parameters must be independent");
         Require(!PageOps.CopyIntoEmptyPage(target, copy) && copy.chartDatas.Count == 2, "never overwrite a populated page");

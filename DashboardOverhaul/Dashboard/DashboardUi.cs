@@ -44,9 +44,13 @@ internal static class DashboardUi
         tip.settings = new UIDashboardTip.Settings
         {
             tipType = UIDashboardTip.TipType.SimpleGeneral,
-            tipTitle = title, tipText = description,
+            tipTitle = string.IsNullOrEmpty(title) ? "" : "{0}",
+            tipText = string.IsNullOrEmpty(description) ? "" : "{0}",
             delay = 0.4f, corner = 3, width = 300
         };
+        // Native tips translate their templates; pass localized labels and user names as literal arguments.
+        tip.tipTitleFormatString = title;
+        tip.tipTextFormatString = description;
         tip.RefreshSimpleGeneralTipText();
     }
 

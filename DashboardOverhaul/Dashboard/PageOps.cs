@@ -220,6 +220,7 @@ public static class PageOps
                 genericStyleIndex = chart.genericStyleIndex,
                 backgroundStyleIndex = chart.backgroundStyleIndex,
                 borderStyleIndex = chart.borderStyleIndex,
+                locked = chart.locked,
                 displayTypeParams = (int[])chart.displayTypeParams.Clone()
             });
         return true;
