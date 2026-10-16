@@ -24,7 +24,7 @@ public static class ChartRename
         var statPlan = ResolveStatPlan(chart);
         if (statPlan == null) return;
 
-        UIDashboardPatch.Bar?.FinishRename();
+        UIDashboardPatch.View?.Tabs.FinishRename();
         Cancel();
         var input = EnsureInput(dash);
         _target = chart;

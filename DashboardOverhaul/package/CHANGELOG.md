@@ -3,6 +3,15 @@
 All notable changes to DashboardOverhaul are documented here.
 本文件记录 DashboardOverhaul 的版本变更。
 
+## [1.4.0] - Unreleased
+
+- 新增悬停快捷键：切换尺寸、背景和边框，重置边框，快速命名生产统计项。按键可配置。/ Added configurable hover hotkeys for chart size, backgrounds, borders, border reset and production-statistic names.
+- 新增页面齿轮，可整页设置样式和锁定状态，分组修改绿色图表的监控设置。/ Added a page gear for styles, locks and grouped display settings for green charts.
+- 新增 1×1、2×1 生产/消耗参考速率布局，以及手动检查生产是否达标的“产量告警”。/ Added reference-rate layouts for 1×1 and 2×1 production charts, plus a manual production check.
+- 新增青绿、淡金、柔红半透明背景和同色边框；颜色和布局随存档保存，改尺寸和复制页面保留锁定状态。/ Added translucent teal, pale gold and soft rose backgrounds with matching borders. Colors and layouts are saved; resizing and page copies keep locks.
+- 仪表盘内可用 `P` 或顶栏按钮开关统计窗口；Shift 点击可直接添加统计项；新增默认关闭的右下角放置选项。/ Use `P` or the header button to toggle statistics from the Dashboard, or Shift-click to add a statistic directly. Optional bottom-right placement is off by default.
+- 3×4 资源图的条形模式增加油井和气态星球数量条；标题字号和长标题显示可配置；Enter 可确认删除统计项。/ Added oil-well and gas-planet count bars to the 3×4 resource chart's bar mode, title size and long-title settings, and Enter to confirm statistic deletion.
+
 ## [1.3.0] - 2026-09-22
 
 - 顶部页签改为独立顶栏，按窗口宽度调整，并提供更大的点击区域、悬停/焦点状态和完整页名提示。/ The top tabs now use a separate responsive header with larger hit areas, hover/focus states and full-name tooltips.

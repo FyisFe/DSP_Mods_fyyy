@@ -1,3 +1,4 @@
+using System;
 using BepInEx;
 using HarmonyLib;
 
@@ -9,14 +10,31 @@ public class DashboardOverhaulPlugin : BaseUnityPlugin
     public new static readonly BepInEx.Logging.ManualLogSource Logger =
         BepInEx.Logging.Logger.CreateLogSource(PluginInfo.PLUGIN_NAME);
 
+    internal static readonly Type[] PatchTypes =
+    {
+        typeof(UIDashboardPatch),
+        typeof(UIChartPatch),
+        typeof(DashboardLayoutPatch),
+        typeof(ChartTitleStyle),
+        typeof(ProductionSpeedLayout),
+        typeof(ConfirmHotkeyPatch),
+        typeof(DashboardKeyPatch),
+        typeof(StatPlanShortcutPatch),
+        typeof(ChartPlacement),
+        typeof(ResourceRateBars),
+        typeof(ChartState),
+        typeof(ChartStyles),
+    };
+
     private Harmony _harmony;
 
     private void Awake()
     {
+        ModConfig.Bind(Config);
+
         _harmony = new Harmony(PluginInfo.PLUGIN_GUID);
-        _harmony.PatchAll(typeof(UIDashboardPatch));
-        _harmony.PatchAll(typeof(UIChartPatch));
-        _harmony.PatchAll(typeof(DashboardLayoutPatch));
+        foreach (var type in PatchTypes) _harmony.PatchAll(type);
+        ChartStyles.Initialize();
 
         Logger.LogInfo("DashboardOverhaul loaded.");
     }
